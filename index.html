@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>狗屎机 // 灵感抽取终端</title>
+<meta name="description" content="投骰子、转轮盘，抽出主题×机制×形态×强制约束，生成可直接开工的软件 / 插件 / 网站 / 游戏构思。" />
+<style>
+/* =====================================================================
+   狗屎机 // DESIGN TOKENS  (style-seed: 赛博朋克 / Cyberpunk)
+   radius: 0 · gradient: none · font: terminal-mono · accent: magenta+cyan
+   ===================================================================== */
+:root{
+  --bg:      #0A0A0A;
+  --surface: #111111;
+  --surface-2:#161616;
+  --surface-3:#0C0C0C;  /* 内嵌凹槽底：转盘台/命题块 */
+  --hole:    #000000;   /* 贯穿孔：hub 底 / 分隔缝 / 反白文字 */
+  --paper:   #FFFFFF;   /* 反白文字 */
+  --tint-green:   #001A08;
+  --tint-amber:   #140F00;
+  --tint-magenta: #1A0010;
+  --edge-green:   #0D3A1A;
+  --edge-magenta: #3D0A22;
+  --edge-cyan:    #0A3A3A;
+  --edge-amber:   #3D2C0A;
+  --line:    #232323;
+  --line-2:  #333333;
+  --dim:     #4A4A4A;
+  --ink:     #D8D8D8;
+  --ink-dim: #888888;
+  --ink-lo:  #5E5E5E;
+  --green:   #00FF41;   /* 主信息色：终端绿 */
+  --magenta: #FF0080;   /* 主强调色：品红 */
+  --cyan:    #00FFFF;   /* 次强调色：青 */
+  --amber:   #FFB000;   /* 警告 / 约束 */
+  --red:     #FF3B30;   /* 危险 / 雷区 */
+  --r:       0px;       /* 本项目禁止圆角 */
+  --mono: "Cascadia Mono","Consolas","JetBrains Mono","DejaVu Sans Mono","Noto Sans Mono CJK SC","Microsoft YaHei Mono",monospace;
+  --cjk:  "SimSun","宋体","Noto Sans Mono CJK SC","Microsoft YaHei",sans-serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg)}
+body{
+  color:var(--ink);
+  font:13.5px/1.75 var(--mono);
+  font-variant-ligatures:none;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  padding-bottom:40px;
+  position:relative;
+  overflow-x:hidden;
+}
+/* 网格底纹 + CRT 暗角（静态层，不参与滚动） */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:
+    linear-gradient(rgba(0,255,65,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,255,65,.035) 1px,transparent 1px);
+  background-size:34px 34px;
+  mask-image:radial-gradient(ellipse 90% 70% at 50% 30%,var(--hole) 55%,transparent 100%);
+  -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 30%,var(--hole) 55%,transparent 100%);
+}
+/* 扫描线 */
+body::after{
+  content:"";position:fixed;inset:0;z-index:99;pointer-events:none;
+  background:repeating-linear-gradient(180deg,rgba(0,0,0,.28) 0 1px,transparent 1px 3px);
+  mix-blend-mode:multiply;opacity:.55;
+}
+::selection{background:var(--magenta);color:var(--hole)}
+
+.shell{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding:0 20px}
+a{color:var(--cyan);text-decoration:none;border-bottom:1px dotted var(--cyan)}
+:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+
+/* ---------- 顶栏：非对称 ---------- */
+.top{
+  display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line-2);padding:20px 0 12px;margin-bottom:0;
+}
+.mark{
+  border:1px solid var(--green);color:var(--green);
+  font-weight:700;font-size:12px;letter-spacing:2px;padding:4px 7px;line-height:1;
+  text-shadow:0 0 6px rgba(0,255,65,.55);
+}
+.mark::before{content:"▚"}
+h1{
+  font:700 30px/1.1 var(--mono);letter-spacing:-.5px;color:var(--paper);
+  text-shadow:2px 0 var(--magenta),-2px 0 var(--cyan);
+}
+h1 em{font-style:normal;color:var(--ink-lo);font-weight:400;font-size:13px;letter-spacing:1px;display:block;margin-top:5px;text-shadow:none}
+.top-right{margin-left:auto;display:flex;gap:0}
+.top-right button{
+  background:transparent;border:1px solid var(--line-2);border-left:0;color:var(--ink-dim);
+  font:12px/1 var(--mono);letter-spacing:1px;padding:9px 13px;cursor:pointer;transition:background .08s,color .08s;
+}
+.top-right button:first-child{border-left:1px solid var(--line-2)}
+.top-right button:hover{background:var(--surface-2);color:var(--green)}
+.top-right button.on{color:var(--magenta);border-color:var(--magenta)}
+
+/* ---------- 状态条 ---------- */
+.status{
+  display:flex;gap:0;flex-wrap:wrap;border-bottom:1px solid var(--line);
+  font-size:11px;letter-spacing:1px;color:var(--ink-lo);margin-bottom:18px;
+}
+.status span{padding:7px 12px;border-right:1px solid var(--line)}
+.status b{color:var(--green);font-weight:400}
+.status .warn b{color:var(--amber)}
+
+/* ---------- 模式切换：终端 tab ---------- */
+nav.tabs{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line-2);margin-bottom:0}
+nav.tabs button{
+  background:transparent;border:1px solid transparent;border-bottom:0;color:var(--ink-lo);
+  font:13px/1 var(--mono);letter-spacing:.5px;padding:11px 16px;cursor:pointer;position:relative;top:1px;
+}
+nav.tabs button:hover{color:var(--ink)}
+nav.tabs button.active{
+  color:var(--green);border-color:var(--line-2);background:var(--bg);
+  box-shadow:inset 0 2px 0 var(--green);
+}
+nav.tabs button .n{color:var(--ink-lo);margin-right:7px}
+nav.tabs button.active .n{color:var(--magenta)}
+nav.tabs .cnt{color:var(--ink-lo);font-size:11px}
+
+/* ---------- 主栅格：左 320 / 右自适应 ---------- */
+main.grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:0;border:1px solid var(--line-2);border-top:0}
+@media (max-width:900px){main.grid{grid-template-columns:1fr}}
+.col-l{border-right:1px solid var(--line-2);min-width:0}
+@media (max-width:900px){.col-l{border-right:0;border-bottom:1px solid var(--line-2)}}
+.col-r{min-width:0;display:flex;flex-direction:column}
+
+.panel-h{
+  display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--line);padding:8px 12px;
+  font-size:10.5px;letter-spacing:2px;color:var(--ink-lo);text-transform:uppercase;
+}
+.panel-h::before{content:"■";color:var(--magenta);font-size:8px}
+.panel-h .right{margin-left:auto;text-transform:none;letter-spacing:1px}
+
+/* ---------- 老虎机行 ---------- */
+.slots{display:block}
+.slot{
+  display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:stretch;
+  border-bottom:1px solid var(--line);transition:background .1s;
+}
+.slot:hover{background:var(--surface)}
+.slot.locked{background:var(--tint-green)}
+.slot .no{
+  border-right:1px solid var(--line);display:grid;place-items:center;
+  font-size:10px;color:var(--ink-lo);letter-spacing:0;
+}
+.slot.locked .no{color:var(--green)}
+.slot .body{padding:9px 12px;min-width:0}
+.slot .k{font-size:10px;letter-spacing:2px;color:var(--ink-lo);margin-bottom:2px}
+.slot .v{font-size:14.5px;color:var(--paper);line-height:1.5;word-break:break-word}
+.slot .v .tagline{display:block;color:var(--ink-dim);font-size:11.5px;margin-top:2px;line-height:1.6;font-family:var(--cjk)}
+.slot.spin .v{color:var(--green);text-shadow:0 0 5px rgba(0,255,65,.6)}
+.slot.spin .v .tagline{opacity:.25}
+.slot .tools{display:grid;border-left:1px solid var(--line)}
+.slot .tools button{
+  width:38px;background:transparent;border:0;border-bottom:1px solid var(--line);
+  color:var(--ink-lo);font:12px/1 var(--mono);cursor:pointer;transition:.08s;
+}
+.slot .tools button:last-child{border-bottom:0}
+.slot .tools button:hover{background:var(--surface-2);color:var(--green)}
+.slot .tools button.on{color:var(--green);background:var(--tint-green)}
+.slot.flash{animation:flash .35s steps(2,end)}
+@keyframes flash{0%{background:var(--magenta);color:var(--hole)}100%{background:transparent}}
+
+/* ---------- 指令行 ---------- */
+.cmd{border-top:1px solid var(--line);padding:11px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button.c{
+  background:transparent;border:1px solid var(--line-2);color:var(--ink);
+  font:13px/1 var(--mono);letter-spacing:.5px;padding:11px 15px;cursor:pointer;transition:.08s;
+}
+button.c:hover{border-color:var(--green);color:var(--green)}
+button.c:active{transform:translate(1px,1px)}
+button.c[disabled]{color:var(--ink-lo);border-color:var(--line);cursor:not-allowed}
+button.c.primary{border-color:var(--magenta);color:var(--magenta);text-shadow:0 0 7px rgba(255,0,128,.5)}
+button.c.primary:hover{background:var(--magenta);color:var(--hole);text-shadow:none}
+kbd{
+  font:10px/1 var(--mono);border:1px solid var(--line-2);color:var(--ink-lo);
+  padding:3px 5px;letter-spacing:1px;
+}
+
+/* ---------- 构思卡：档案式 ---------- */
+.brief{padding:0}
+.brief-top{border-bottom:1px dashed var(--line-2);padding:16px 18px 14px;position:relative}
+.brief-top::after{
+  content:"DOSSIER";position:absolute;right:14px;top:12px;
+  font-size:9.5px;letter-spacing:3px;color:var(--line-2);
+}
+.codename{
+  font:700 25px/1.25 var(--mono);color:var(--paper);letter-spacing:-.5px;
+  text-shadow:2px 0 rgba(255,0,128,.55),-2px 0 rgba(0,255,255,.45);
+}
+.codename.glitch{animation:glitch .4s steps(3,end) 2}
+@keyframes glitch{
+  0%{transform:translate(0);text-shadow:2px 0 var(--magenta),-2px 0 var(--cyan)}
+  25%{transform:translate(-2px,1px);text-shadow:-3px 0 var(--magenta),3px 0 var(--cyan)}
+  50%{transform:translate(2px,-1px);text-shadow:3px 0 var(--green),-3px 0 var(--magenta)}
+  75%{transform:translate(-1px,0);text-shadow:-2px 0 var(--cyan),2px 0 var(--green)}
+  100%{transform:translate(0);text-shadow:2px 0 var(--magenta),-2px 0 var(--cyan)}
+}
+.badges{display:flex;flex-wrap:wrap;gap:0;margin-top:10px}
+.badge{
+  font-size:10.5px;letter-spacing:1px;padding:3px 8px;border:1px solid var(--line-2);
+  color:var(--ink-dim);margin:0 -1px -1px 0;
+}
+.badge.g{color:var(--green);border-color:var(--edge-green)}
+.badge.m{color:var(--magenta);border-color:var(--edge-magenta)}
+.badge.c{color:var(--cyan);border-color:var(--edge-cyan)}
+.badge.a{color:var(--amber);border-color:var(--edge-amber)}
+.pitch{padding:15px 18px;border-bottom:1px solid var(--line);color:var(--ink);font-family:var(--cjk);font-size:14.5px;line-height:1.95;letter-spacing:.02em}
+.pitch b{color:var(--green);font-weight:400;border-bottom:1px solid rgba(0,255,65,.35)}
+
+.body-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.block{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:13px 16px}
+.block .t{
+  font-size:10.5px;letter-spacing:2px;color:var(--ink-lo);margin-bottom:9px;
+  display:flex;align-items:baseline;gap:8px;
+}
+.block .t b{color:var(--cyan);font-weight:400}
+.block ul{list-style:none}
+.block li{position:relative;padding-left:15px;color:var(--ink-dim);margin:6px 0;font-family:var(--cjk);line-height:1.8}
+.block li::before{content:"›";position:absolute;left:0;color:var(--dim);font-family:var(--mono)}
+.block li b{color:var(--ink);font-weight:400}
+.block.rule .t b{color:var(--amber)}
+.block.rule li::before{content:"!";color:var(--amber)}
+.block.rule{background:var(--tint-amber)}
+.block.no .t b{color:var(--red)}
+.block.no li::before{content:"×";color:var(--red)}
+.block.ok .t b{color:var(--green)}
+.block.ok li::before{content:"+";color:var(--green)}
+.steps{list-style:none;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding-left:34px;font-family:var(--cjk)}
+.steps li::before{
+  content:"0" counter(s);position:absolute;left:0;top:0;color:var(--green);
+  font-family:var(--mono);font-size:11px;border:1px solid var(--edge-green);padding:0 5px;line-height:1.5;
+}
+.steps li::after{content:none}
+.names{display:flex;flex-wrap:wrap;gap:6px}
+.names span{border:1px dashed var(--line-2);color:var(--cyan);padding:2px 8px;font-size:12.5px}
+
+/* ---------- 转盘 ---------- */
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+.two > div{border-right:1px solid var(--line);min-width:0}
+.two > div:last-child{border-right:0}
+.wheelstage{position:relative;display:grid;place-items:center;padding:18px;background:var(--surface-3)}
+#wheel{width:min(400px,80vw);height:min(400px,80vw);display:block}
+.needle{
+  position:absolute;top:14px;left:50%;width:0;height:0;z-index:2;
+  border-left:7px solid transparent;border-right:7px solid transparent;border-top:13px solid var(--magenta);
+  filter:drop-shadow(0 0 5px rgba(255,0,128,.9));
+}
+.hub{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:104px;height:104px;border-radius:50%;cursor:pointer;padding:0;
+  background:var(--hole);border:1px solid var(--line-2);color:var(--ink-dim);
+  font:11px/1.5 var(--mono);letter-spacing:1px;display:grid;place-items:center;transition:.12s;
+}
+.hub:hover{border-color:var(--green);color:var(--green);box-shadow:0 0 0 1px var(--green),0 0 22px rgba(0,255,65,.28)}
+.hub b{display:block;font-size:15px;color:var(--paper);letter-spacing:2px}
+.hub b::after{content:"_";color:var(--green);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+.chips{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line)}
+.chips button{
+  background:transparent;border:0;border-right:1px solid var(--line);color:var(--ink-lo);
+  font:11.5px/1 var(--mono);letter-spacing:.5px;padding:10px 12px;cursor:pointer;
+}
+.chips button:hover{background:var(--surface);color:var(--ink)}
+.chips button.active{background:var(--magenta);color:var(--hole)}
+.chips button i{font-style:normal;opacity:.6;margin-left:5px}
+.items{max-height:322px;overflow:auto}
+.item{display:grid;grid-template-columns:26px minmax(0,1fr) auto;border-bottom:1px solid var(--line);align-items:stretch}
+.item .ix{border-right:1px solid var(--line);display:grid;place-items:center;font-size:10px;color:var(--ink-lo)}
+.item .tx{padding:7px 11px;font-size:12.5px;color:var(--ink-dim);word-break:break-word;font-family:var(--cjk)}
+.item .tx s{color:var(--ink-lo);text-decoration:none}
+.item .tools{display:flex}
+.item .tools button{
+  width:32px;background:transparent;border:0;border-left:1px solid var(--line);
+  color:var(--ink-lo);cursor:pointer;font:11px/1 var(--mono);
+}
+.item .tools button:hover{background:var(--surface-2);color:var(--green)}
+.item.off{opacity:.42}
+.item.off .tx{text-decoration:line-through}
+.item.hit{background:var(--tint-magenta);box-shadow:inset 3px 0 0 var(--magenta)}
+
+.inrow{display:flex;border-top:1px solid var(--line)}
+.inrow input{flex:1;background:transparent;border:0;border-right:1px solid var(--line);color:var(--ink);padding:11px 12px;font:12.5px/1.4 var(--mono);outline:none}
+.inrow input:focus{background:var(--tint-green)}
+.inrow input::placeholder{color:var(--ink-lo)}
+.inrow button{background:transparent;border:0;color:var(--ink-dim);padding:0 14px;cursor:pointer;font:12px/1 var(--mono);letter-spacing:1px}
+.inrow button:hover{background:var(--surface-2);color:var(--green)}
+textarea{
+  width:100%;background:transparent;border:1px solid var(--line-2);color:var(--ink);
+  padding:11px 12px;font:13px/1.7 var(--cjk);outline:none;resize:vertical;min-height:78px;
+}
+textarea:focus{border-color:var(--green)}
+.out{border-bottom:1px solid var(--line);padding:14px 16px}
+.out .lb{font-size:10px;letter-spacing:2px;color:var(--ink-lo)}
+.out .vl{font-size:20px;color:var(--green);margin:6px 0 4px;text-shadow:0 0 8px rgba(0,255,65,.45);word-break:break-word}
+.out .ds{color:var(--ink-dim);font-size:12.5px;font-family:var(--cjk);line-height:1.8}
+.out.flash{animation:flash .35s steps(2,end)}
+
+/* ---------- 命题 ---------- */
+.prop{border-left:2px solid var(--green);padding:16px 18px;background:var(--surface-3);margin-top:14px}
+.prop .lb{font-size:10px;letter-spacing:2px;color:var(--ink-lo)}
+.prop .tx{font:16px/1.9 var(--cjk);color:var(--paper);margin-top:8px}
+.prop .tx::after{content:"▌";color:var(--green);animation:blink 1s steps(1) infinite;margin-left:2px}
+
+/* ---------- 灵感本 ---------- */
+.nb-item{border:1px solid var(--line);border-left:2px solid var(--line-2);padding:11px 14px;margin-bottom:-1px}
+.nb-item:hover{border-left-color:var(--green);background:var(--surface-3)}
+.nb-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.nb-n{color:var(--paper);font-size:14px}
+.nb-d{color:var(--ink-lo);font-size:10.5px;letter-spacing:1px}
+.nb-tools{margin-left:auto;display:flex;gap:0;border:1px solid var(--line)}
+.nb-tools button{background:transparent;border:0;border-left:1px solid var(--line);color:var(--ink-lo);padding:3px 9px;cursor:pointer;font:10.5px/1.4 var(--mono);letter-spacing:1px}
+.nb-tools button:first-child{border-left:0}
+.nb-tools button:hover{background:var(--surface-2);color:var(--green)}
+.nb-p{color:var(--ink-dim);font-size:12.5px;margin-top:7px;font-family:var(--cjk);line-height:1.8}
+.nb-tags{display:flex;flex-wrap:wrap;gap:0;margin-top:8px}
+.nb-tags span{font-size:10.5px;color:var(--ink-lo);border:1px solid var(--line);padding:2px 7px;margin:0 -1px -1px 0}
+.blank{padding:44px 20px;text-align:center;color:var(--ink-lo);line-height:2}
+.blank b{display:block;color:var(--line-2);font-size:30px;letter-spacing:6px;margin-bottom:10px}
+
+/* ---------- 页脚 ---------- */
+footer{border-top:1px solid var(--line-2);margin-top:22px;padding:14px 0 0;color:var(--ink-lo);font-size:11.5px;line-height:2;font-family:var(--cjk)}
+footer b{color:var(--ink-dim);font-weight:400}
+footer .sig{font-family:var(--mono);color:var(--line-2);margin-top:6px;font-size:10.5px;letter-spacing:1px}
+
+/* ---------- 提示 ---------- */
+#toast{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:120;
+  background:var(--hole);border:1px solid var(--green);color:var(--green);
+  padding:10px 16px;font:12px/1.4 var(--mono);letter-spacing:.5px;
+  box-shadow:0 0 0 1px var(--hole),0 0 24px rgba(0,255,65,.25);
+  opacity:0;pointer-events:none;transition:opacity .12s;
+}
+#toast.show{opacity:1}
+#toast::before{content:"> "}
+
+.hidden{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line-2);border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:var(--dim)}
+::-webkit-scrollbar-track{background:var(--bg)}
+
+/* 无障碍：尊重减少动效；L3 动效必须有降级路径 */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  h1,.codename{text-shadow:none}
+  body::after{display:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="top">
+    <div class="mark">GX-01</div>
+    <h1>狗屎机<em>IDEA EXTRACTION TERMINAL // v2.0 // OFFLINE</em></h1>
+    <div class="top-right">
+      <button id="soundBtn">SND:ON</button>
+      <button id="helpBtn">MAN</button>
+    </div>
+  </header>
+
+  <div class="status">
+    <span>SYS <b>READY</b></span>
+    <span>DECK 主题40·机制42·形态30·约束30</span>
+    <span>STORAGE <b>LOCAL ONLY</b></span>
+    <span class="warn">NET <b>DISABLED</b></span>
+  </div>
+
+  <nav class="tabs" id="switch">
+    <button data-mode="slots" class="active"><span class="n">01</span>ROLL / 老虎机</button>
+    <button data-mode="wheel"><span class="n">02</span>WHEEL / 转盘</button>
+    <button data-mode="prompts"><span class="n">03</span>PROMPT / 命题</button>
+    <button data-mode="notebook"><span class="n">04</span>ARCHIVE / 灵感本 <span class="cnt" id="nbCount">0</span></button>
+  </nav>
+
+  <!-- ============ 01 老虎机 ============ -->
+  <main class="grid" id="stage-slots">
+    <section class="col-l">
+      <div class="panel-h">DICE FEED<span class="right">空格=掷</span></div>
+      <div class="slots" id="slots"></div>
+      <div class="cmd">
+        <button class="c primary" id="rollBtn">▶ 掷出构思</button>
+        <button class="c" id="rollAllBtn">↻ 全重抽</button>
+        <button class="c" id="lockAllBtn">▣ 全锁定</button>
+      </div>
+      <div class="panel-h" style="border-top:1px solid var(--line);border-bottom:0">LOCK 锁定可保留该格 · 单格 = 只重抽本文</div>
+    </section>
+    <section class="col-r">
+      <div class="panel-h">DOSSIER 构思卡<span class="right" id="briefStamp">—</span></div>
+      <div id="briefHost"></div>
+    </section>
+  </main>
+
+  <!-- ============ 02 转盘 ============ -->
+  <main class="grid hidden" id="stage-wheel">
+    <section class="col-l">
+      <div class="panel-h">ELEMENT BAY<span class="right">点击选中</span></div>
+      <div class="chips" id="picker"></div>
+      <div class="items" id="items"></div>
+      <div class="inrow">
+        <input type="text" id="newItem" placeholder="追加元素，回车写入…" />
+        <button id="addItemBtn">+ADD</button>
+      </div>
+      <div class="cmd">
+        <button class="c" id="resetItemsBtn">↻ 重置本组</button>
+      </div>
+    </section>
+    <section class="col-r">
+      <div class="panel-h">ROULETTE<span class="right">空格=转</span></div>
+      <div class="wheelstage">
+        <div class="needle"></div>
+        <canvas id="wheel" width="900" height="900"></canvas>
+        <button class="hub" id="hubBtn"><span>点击 / 空格<b>SPIN</b></span></button>
+      </div>
+      <div class="out hidden" id="wheelResult">
+        <div class="lb">// HIT</div>
+        <div class="vl" id="wheelValue">—</div>
+        <div class="ds" id="wheelDesc"></div>
+        <div class="cmd" style="border:0;padding:12px 0 0">
+          <button class="c primary" id="useAsFormBtn">▶ 写入老虎机</button>
+          <button class="c" id="spinAgainBtn">↻ 再转</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 03 命题 ============ -->
+  <main class="grid hidden" id="stage-prompts">
+    <section class="col-l">
+      <div class="panel-h">PROMPT<span class="right">空格=抽</span></div>
+      <div class="cmd" style="border-top:0">
+        <button class="c primary" id="promptBtn">▶ 抽一句命题</button>
+        <button class="c" id="promptSaveBtn">▤ 存入灵感本</button>
+      </div>
+      <div class="panel-h" style="border-bottom:0">一句话，当唯一约束条件</div>
+    </section>
+    <section class="col-r">
+      <div class="panel-h">OUTPUT</div>
+      <div id="promptHost"></div>
+    </section>
+  </main>
+
+  <!-- ============ 04 灵感本 ============ -->
+  <main class="grid hidden" id="stage-notebook">
+    <section class="col-l">
+      <div class="panel-h">ARCHIVE<span class="right">MAX 200</span></div>
+      <div class="cmd" style="border-top:0">
+        <button class="c" id="exportBtn">↓ 导出 .md</button>
+        <button class="c" id="clearBtn">× 清空</button>
+      </div>
+      <div class="panel-h" style="border-bottom:0">掷出的卡自动入档</div>
+    </section>
+    <section class="col-r">
+      <div class="panel-h">RECORDS<span class="right" id="nbCount2">0</span></div>
+      <div id="nbHost"></div>
+    </section>
+  </main>
+
+  <footer>
+    <b>用法 · </b>掷一次 → 锁住喜欢的格子再重抽 → 把「强制约束」当真（它才是灵感的来源）→ 按 MVP 那三条动手。<br />
+    <b>隐私 · </b>数据只写在本机 localStorage，无网络请求、无账号、无追踪。想改词库：编辑 index.html 里的 THEMES / MECHANICS / FORMS / CONSTRAINTS 数组，或直接在转盘里加元素。
+    <div class="sig">GX-01 // RADIUS 0px // NO GRADIENT // NO EMOJI // BUILT OFFLINE</div>
+  </footer>
+</div>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   狗屎机 · 灵感抽取终端
+   数据 → 组合 → 成卡 → 呈现
+   ===================================================================== */
+
+/* ---------------------- 词库 ---------------------- */
+
+const THEMES = [
+  ["天气","把天气变成可交易、可收集、可预测的东西"],
+  ["老旧物件","二手、修复、传家宝、被淘汰的技术"],
+  ["声音","环境音、方言、噪音、节拍、静音"],
+  ["气味与味觉","风味、发酵、嗅觉记忆"],
+  ["地图与路线","迷路、通勤、边境、地标"],
+  ["小人物的日常","外卖员、值夜班的人、代驾、宿管"],
+  ["时间","倒计时、循环、延迟、错过、预约"],
+  ["记忆","遗忘、闪回、错记、纪念品"],
+  ["身体的信号","心跳、困意、疼痛、习惯动作"],
+  ["城市基础设施","井盖、管网、路灯、配电箱、天桥"],
+  ["纸张与印刷","票据、说明书、手写信、铅字"],
+  ["菜市场","讨价还价、时令、摊主、找零"],
+  ["童年游戏","跳房子、弹珠、翻花绳、捉迷藏"],
+  ["动物行为","迁徙、筑巢、领地、拟态、群集"],
+  ["植物与生长","花期、攀爬、嫁接、枯萎、年轮"],
+  ["深海与夜空","无光之处、星座、洋流、孤独"],
+  ["方言与口头禅","口音、俚语、家族黑话"],
+  ["咖啡馆与餐馆","菜单、翻台、熟客、拼桌"],
+  ["图书馆与档案","检索、索引、借还、旧报纸"],
+  ["市场与摆摊","吆喝、爆款、假货、滞销"],
+  ["交通枢纽","换乘、晚点、候车、失物招领"],
+  ["快递与物流","分拣、驿站、面单、代收"],
+  ["医院与排队","叫号、病历、陪护、夜班"],
+  ["学校与考试","错题、笔记、同桌、铃声"],
+  ["办公室政治","周报、甩锅、会议室、茶水间"],
+  ["垃圾与回收","分类、翻找、以物换物"],
+  ["停电与故障","离线、降级、手写、应急"],
+  ["老人与手艺","失传、带徒弟、慢工、匠人"],
+  ["宠物与流浪","领养、投喂、失踪、认领"],
+  ["游戏与桌游","规则怪谈、骰子、手牌、复盘"],
+  ["深夜情绪","失眠、焦虑、后悔、突然的勇气"],
+  ["孤独与连接","陌生人、搭子、笔友、离线信"],
+  ["环保与修补","旧物改造、能耗、一次性、可持续"],
+  ["金融与攒钱","记账、分期、二手交易、砍价"],
+  ["法律与规则","合同、投诉、维权、免责条款"],
+  ["谣言与真相","辟谣、截图、信任、跟风"],
+  ["监控与隐私","摄像头、脱敏、同意、黑箱"],
+  ["手工与 DIY","图纸、焊接、缝补、开源硬件"],
+  ["舞台与表演","彩排、台词、观众、谢幕"],
+  ["体育与训练","陪练、记录、伤病、业余联赛"],
+];
+
+const MECHANICS = [
+  ["配对","每轮翻两张，看你能不能记住它们的关系"],
+  ["合成","两个东西撞在一起，变出第三种"],
+  ["时间倒流","先看到结果，再倒着推出前因"],
+  ["资源分配","只够分给一个人，你选谁"],
+  ["盲盒抽取","不知道会得到什么，但你能决定留下还是换掉"],
+  ["限时挑战","给你 60 秒，做不完就是做不完"],
+  ["排行榜","每天刷新，昨天的高手今天归零"],
+  ["协作拼图","每人只看到一小块，必须互相说"],
+  ["等价交换","你只能拿已有的东西去换"],
+  ["做减法","规则是每轮必须删掉一个功能"],
+  ["养成","每天来一次，它会因为你而变得不一样"],
+  ["模拟经营","进货、定价、雇人、撑过淡季"],
+  ["Roguelike 循环","每次重开都带着上一次的教训，但装备清零"],
+  ["推理解谜","线索都摆出来了，只是你没看对地方"],
+  ["谈判博弈","对面也在算，你必须猜他会怎么选"],
+  ["放置挂机","你离开的时候它还在长"],
+  ["节奏判定","快一点慢一点都不行"],
+  ["反向操作","你操作的是敌人，目标是让自己输"],
+  ["生成与组合","系统给你零件，你来定义它们的意思"],
+  ["抽卡与构筑","从随机卡池里搭出一副只属于你的组合"],
+  ["地图探索","边缘之外还有什么，你得走过去看"],
+  ["物理与堆叠","重力说了算，你只是试图不塌"],
+  ["噪音与信号","有用的信息藏在一堆垃圾里"],
+  ["投票与共识","所有人同意才能继续，但有人撒谎"],
+  ["角色扮演","你假装是另一个人，直到你自己也信了"],
+  ["自动化流水线","把重复劳动交给机器，然后看它出错"],
+  ["翻译与转述","传话十个人，看它变成什么样"],
+  ["档案与检索","从一堆旧东西里翻出你要的那一条"],
+  ["配对与冲突","两个需求互相打架，你只能让步一个"],
+  ["倒计时压力","有个东西在持续变坏"],
+  ["一人一票","每个选择都会永久改变后续"],
+  ["无限模式","没有终点，只有你什么时候放弃"],
+  ["社交推理","有人在说谎，但没人知道是谁"],
+  ["养成与放置","你种下的东西会自己长成别的形状"],
+  ["防御与塔防","资源永远不够，只能选在哪里流血"],
+  ["切换视角","同一件事，换个角度就完全不一样"],
+  ["实时对战","你只有一次机会，对手在读你"],
+  ["沙盒搭建","没有目标，只有一堆能做的东西"],
+  ["卡牌与手牌","选择有限，且用掉就没了"],
+  ["地图绘制","你走过的地方才存在"],
+  ["随机事件","每走一步，世界都可能改主意"],
+  ["合作闯关","一个人过不去，两个人也未必"],
+];
+
+const FORMS = [
+  ["网页小应用","打开就能用，不需要安装，可分享链接"],
+  ["浏览器插件","寄居在别人网页上，做那一点点更好用的事"],
+  ["手机小游戏","竖屏、单手、三分钟一局"],
+  ["小程序","用完即走，靠分享传播"],
+  ["桌面工具","本地跑、离线、处理你自己的文件"],
+  ["命令行工具","一条命令解决一件事，可被脚本调用"],
+  ["Discord / 群机器人","在聊天里活着的角色"],
+  ["微信/飞书机器人","帮群里的人办一件麻烦事"],
+  ["静态网站","没有后端，也没有账号"],
+  ["数据可视化","把一份没人看得下去的数据变成一张图"],
+  ["API 服务","别人来调用你的能力"],
+  ["开源库 / SDK","给开发者用的零件"],
+  ["硬件玩具","有灯有按钮，摆在桌上"],
+  ["电子表格模板","不会写代码的人也能用的自动机"],
+  ["VS Code 插件","为写代码的人省下一点时间"],
+  ["互动叙事","读者的选择改变结局"],
+  ["解谜密室","限时、线索、一把锁"],
+  ["桌游 / 卡牌","可以打印出来玩"],
+  ["聊天式应用","界面就是一个对话框"],
+  ["录音 / 语音应用","只用嘴和耳朵操作"],
+  ["纯键盘工具","不碰鼠标，全靠快捷键"],
+  ["通知 / 提醒服务","在正确的时刻打扰你一次"],
+  ["浏览器起始页","你每天第一眼看到的东西"],
+  ["写作 / 笔记工具","帮人把脑子里的一团理清楚"],
+  ["生成式小工具","输入一点，输出很多"],
+  ["多人同步房间","几个人同时在线做同一件事"],
+  ["地图 / 位置应用","和真实世界的位置有关"],
+  ["日历 / 时间工具","围绕某一天做文章"],
+  ["教育 / 练习工具","让重复练习不那么难熬"],
+  ["无障碍辅助工具","为某一类身体条件重新设计交互"],
+];
+
+const CONSTRAINTS = [
+  ["一个文件跑完全程","除了一个 HTML/单文件，不许有别的依赖"],
+  ["不许联网","断网也必须完整可用"],
+  ["不许有账号","没有注册、没有登录、没有云端"],
+  ["只用键盘","所有操作必须能用键盘完成"],
+  ["10 秒内必须给出第一次反馈","用户不该等超过 10 秒才看到结果"],
+  ["代码总量 500 行以内","超了就砍功能，不许超"],
+  ["0 个第三方依赖","只能用手写和标准库"],
+  ["所有数据只存在本机","绝不上传，隐私为第一原则"],
+  ["必须能离线打印出来玩","纸质版要成立"],
+  ["单局不超过 60 秒","节奏必须极快"],
+  ["只能有一个按钮","整个界面只允许一个操作入口"],
+  ["必须支持键盘快捷键完成全部流程","鼠标可以坏掉"],
+  ["界面完全无文字","靠图形和颜色传达"],
+  ["界面只用文字","不许有图片和图标"],
+  ["必须在手机上单手可玩","拇指覆盖一切"],
+  ["支持中英两种语言","不能写死文案"],
+  ["所有内容可被用户改写成自己的","词库必须外置"],
+  ["必须能被陌生人 30 秒内学会","无需说明书"],
+  ["必须每天只允许用一次","稀缺本身是设计"],
+  ["必须有真实的等待时间","不能立刻给结果"],
+  ["必须能在 320px 宽的屏幕上用","小屏优先"],
+  ["必须能导出成一份可分享的图片","结果要能发出去"],
+  ["必须能一个人玩，也必须能两个人玩","两种人数都成立"],
+  ["必须有一个会主动找你的机制","不能只等人来"],
+  ["必须让用户做一次不可撤销的选择","没有存档读档"],
+  ["必须能被当成教学案例讲 5 分钟","结构清晰、边界明确"],
+  ["必须有一处刻意的不方便","反效率的地方"],
+  ["必须由随机数决定一次关键走向","接受失控"],
+  ["必须在没有颜色的情况下也成立","色盲友好"],
+  ["必须在加载时不用 spinner","瞬间出现"],
+];
+
+const AUDIENCES = [
+  "深夜失眠的人","刚搬到大城市的年轻人","家里有老人要照顾的人","通勤一小时的打工人",
+  "小店主和摆摊的人","独立开发者","在校学生与考研党","带娃的父母",
+  "业余运动爱好者","开网店的个体户","社区志愿者和物业","喜欢做手账的人",
+  "独居的人","经常出差的人","自由职业者","游戏公会会长",
+  "图书馆/档案馆管理员","外卖与快递骑手","慢性病患者与陪护家属","乐队与独立音乐人",
+  "小镇返乡青年","退休后想找事做的人","编程初学者","内容创作者与主播",
+  "厨师和后厨团队","宠物主人","视障或听障用户","第一次当老师的人",
+  "想省钱的大学生","热爱二手交易的人","夜班工作者","民宿与青旅老板",
+];
+
+const TWISTS = [
+  "但规则每天都变一点",
+  "但必须由两个人一起完成",
+  "但只能用你已经有的东西",
+  "但失败会留下永久的痕迹",
+  "但对每个人显示的结果都不一样",
+  "但它只在特定时间可用",
+  "但声音是唯一的信息来源",
+  "但你无法保存进度",
+  "但它会记住你上次的选择",
+  "但你只能通过别人来操作",
+  "但真相藏在数据里，不在故事里",
+  "但代价是你要删掉一样东西",
+  "但它是给陌生人用的，不是给你自己",
+  "但你必须先教会别人怎么用",
+  "但它不能显示任何数字",
+  "但你必须匿名",
+];
+
+const VIBES = [
+  "温暖治愈","荒诞搞笑","冷静克制","紧张刺激","怀旧复古","极简性冷淡",
+  "赛博霓虹","纸质手作感","档案室气质","夏日午后","深夜便利店","实验室冷光",
+];
+
+const SCOPES = [
+  "午休一小时能做完的玩具",
+  "一个周末的 MVP",
+  "一周能出可玩版本",
+  "一个月的正式项目",
+  "可以一直做下去的东西",
+];
+
+const PROMPTS = [
+  "做一个只能用键盘完成、但不能用方向键的东西。",
+  "把「等公交车的那 8 分钟」做成一个产品。",
+  "做一个没有进度条的应用，但用户能感觉到进度。",
+  "用一张纸和一支笔能玩，搬到屏幕上仍然成立。",
+  "做一个只在你犯错之后才出现的工具。",
+  "把家里最旧的一件东西做成一个软件。",
+  "做一个需要两个人分别在不同时间使用的单机应用。",
+  "把「找零」这件事做成游戏。",
+  "做一个每次打开都少一个功能的产品。",
+  "做一个让陌生人互相帮忙，但不能私聊的东西。",
+  "把你所在城市的一条公交线路做成一个作品。",
+  "做一个只有声音、没有画面的东西。",
+  "做一个不需要网络的多人游戏。",
+  "把「说明书」做成一个可以玩的东西。",
+  "做一个帮人下决心的小工具，只有一次机会。",
+  "把你手机里最没用的那个 App 重做一遍，做好一件事。",
+  "做一个会主动忘记你数据的应用，并把它当卖点。",
+  "把「排队」变成一种娱乐。",
+  "做一个只能用一次的网站。",
+  "把一句方言做成一个交互作品。",
+  "做一个给小孩用、但大人也想玩的东西。",
+  "做一个把文字变成动作的工具。",
+  "把「今天吃什么」做成一个正经项目。",
+  "做一个记录失败而不是成功的应用。",
+  "做一个只有 7 个按键的乐器软件。",
+  "把「收拾房间」做成一个闯关游戏。",
+  "做一个让老年人第一次主动使用的应用。",
+  "做一个只显示一天、过期自动消失的东西。",
+  "把「道歉」做成一个交互流程。",
+  "做一个没有设置项的产品。",
+];
+
+/* ---------------------- 工具 ---------------------- */
+
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const rand = n => Math.floor(Math.random()*n);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const vib = (arr,k=2)=>{const c=[...arr],o=[];while(o.length<k&&c.length)o.push(c.splice(rand(c.length),1)[0]);return o;};
+const sample = (arr,k)=>{const c=[...new Set(arr)],o=[];while(o.length<k&&c.length)o.push(c.splice(rand(c.length),1)[0]);return o;};
+const pad2 = n => String(n).padStart(2,"0");
+const plain = s => String(s).replace(/<[^>]+>/g,"");
+
+/* ---------------------- 状态 ---------------------- */
+
+const LS = "gousi-machine-v1";
+const state = {
+  sound: true,
+  mode: "slots",
+  current: null,
+  locks: {theme:false,mech:false,form:false,rule:false,aud:false,twist:false,vibe:false,scope:false},
+  wheel: {group:0, rotation:0, spinning:false, last:null, hitIndex:-1},
+  notebook: [],
+  prompt: null,
+};
+try{
+  const saved = JSON.parse(localStorage.getItem(LS) || "{}");
+  if(saved.sound !== undefined) state.sound = saved.sound;
+  if(Array.isArray(saved.notebook)) state.notebook = saved.notebook;
+  if(saved.wheelItems) state.wheelCustom = saved.wheelItems;
+}catch(e){}
+
+function save(){
+  try{ localStorage.setItem(LS, JSON.stringify({sound:state.sound, notebook:state.notebook, wheelItems:state.wheelCustom||null})); }catch(e){}
+}
+
+/* ---------------------- 音效（方波，终端感） ---------------------- */
+let AC = null;
+function beep(freq, dur, type, gain){
+  if(!state.sound) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state === "suspended") AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || "square"; o.frequency.value = freq;
+    const t = AC.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain || 0.035, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (dur||0.07));
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + (dur||0.07) + 0.02);
+  }catch(e){}
+}
+const tick = () => beep(1400 + rand(700), 0.02, "square", 0.018);
+const ding = () => { beep(660,0.06,"square",0.04); setTimeout(()=>beep(990,0.09,"square",0.035),55); };
+
+/* ---------------------- 抽卡 ---------------------- */
+
+function drawOne(key){
+  switch(key){
+    case "theme": return pick(THEMES);
+    case "mech":  return pick(MECHANICS);
+    case "form":  return pick(FORMS);
+    case "rule":  return pick(CONSTRAINTS);
+    case "aud":   return [pick(AUDIENCES),""];
+    case "twist": return [pick(TWISTS),""];
+    case "vibe":  return [pick(VIBES),""];
+    case "scope": return [pick(SCOPES),""];
+  }
+}
+
+function newRoll(force){
+  const keys = ["theme","mech","form","rule","aud","twist","vibe","scope"];
+  const next = {};
+  for(const k of keys){
+    if(!force && state.locks[k] && state.current && state.current[k]) next[k] = state.current[k];
+    else next[k] = drawOne(k);
+  }
+  return next;
+}
+
+/* ---------------------- 成卡 ---------------------- */
+
+function buildBrief(c){
+  const [themeName, themeNote] = c.theme;
+  const [formName, formNote] = c.form;
+  const [ruleName] = c.rule;
+  const mech = c.mech[0];
+  const twist = c.twist[0];
+  const aud = c.aud[0];
+  const scope = c.scope[0];
+  const vibe = c.vibe[0];
+
+  const codename = pick(["项目","代号","计划","实验","小东西"]) + "「" + pick(["未命名","先做再说","三分之一","凌晨","补丁","临时","回声","余数","毛边","静默"]) + "-" + String(rand(90)+10) + "」";
+
+  const pitch =
+    `给<b>${aud}</b>做一个<b>${formName}</b>：围绕<b>「${themeName}」</b>，用<b>「${mech}」</b>的机制，` +
+    `把${themeNote}这件事重新做一遍。整体气质偏向<b>${vibe}</b>，规模是<b>${scope}</b>。`;
+
+  const names = sample(["拨片","刻度","回执","编号","体温计","信箱","收据","星图","磁带","锈","补丁","小票","候车厅","空白页","回声壁","第七格","杂音","备忘录","暗号","拾荒袋"], 3);
+
+  const core = [
+    `第一动作：<b>${c.mech[1]}</b>`,
+    `唯一产出：一个<b>可以带走的东西</b>（一张图、一段文字、一个数字、一条记录）`,
+    `「${mech}」必须是核心，不能只是包装：去掉它产品就垮了，说明放对了位置`,
+  ];
+
+  const rules = [`硬约束：<b>${ruleName}</b> —— 这是本题的题眼，不许绕开`];
+  vib(CONSTRAINTS.filter(r=>r[0]!==ruleName), 1).forEach(r=>rules.push(`附加约束：<b>${r[0]}</b>（${r[1]}）`));
+
+  const mvp = [
+    `<b>一个入口</b>：打开就进入「${mech}」的核心循环，没有首页和引导页`,
+    `<b>一条假数据也能跑通</b>：先用 3~5 条手写内容把「${themeName}」跑起来，别急着接真实数据`,
+    `<b>能分享一次结果</b>：把产物变成一段文字或一张图，让别人看到你在做什么`,
+  ];
+
+  const ext = [
+    `把内容交给用户：让使用者自己往里加「${themeName}」的词条，产品开始自己长大`,
+    `加一层时间：每日一题 / 每周结算 / 历史回顾，让人有理由回来`,
+    `加一层社交：看别人的选择与结果，但不要加关注和点赞`,
+    `换一个载体：同一套「${mech}」逻辑，从${formName}搬到${pick(FORMS.filter(f=>f[0]!==formName))[0]}`,
+  ];
+
+  const bonus = [
+    "有一段属于它自己的声音（哪怕只有两个音）",
+    "有一个能被记住的名字和一句能被复述的主张",
+    "第一次使用不需要注册、不需要看说明",
+    `有一处刻意保留的粗糙：<b>${twist}</b>`,
+  ];
+
+  const avoid = [
+    "贪大：一上来就做账号体系、后台、多端同步",
+    "把「好看」当目标：先让它能用，再让它好看",
+    "做成待办清单：任何「记录 + 提醒」的组合都会变成没人打开的清单",
+    "做成另一种社交媒体：除非你真有话要说",
+  ];
+
+  const success = [
+    `有人第二次打开它，并因为「${ruleName}」而改变了用法`,
+    "你能用一句话向朋友解释它，且对方愿意试一次",
+    "做出来只花掉了计划时间的一半，剩下的时间你想加点别的",
+  ];
+
+  const questions = [
+    `如果只能保留一个功能，是哪一个？（大概率就是「${mech}」）`,
+    `你的第一个用户是谁？（别写「所有人」）`,
+    `怎么在 30 秒内让陌生人第一次尝到甜头？`,
+  ];
+
+  const steps = [
+    `写 200 字规则说明：把「${mech}」讲清楚，讲不清楚就是还没想好`,
+    `画一张草图：${formName}上会看到的第一屏长什么样`,
+    `做最丑的可运行版本：只用假数据，能玩通「${mech}」一轮就停手`,
+    `找 3 个人试，只看他们卡在哪里，不解释`,
+    `再决定要不要继续——继续就加，不继续就换一张卡`,
+  ];
+
+  return {codename, pitch, names, core, rules, mvp, ext, bonus, avoid, success, questions, steps,
+          tags:{form:formName, vibe, scope, mech, theme:themeName, aud, formNote}};
+}
+
+/* ---------------------- DOM ---------------------- */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+let toastTimer = null;
+function toast(msg){
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove("show"), 1900);
+}
+
+function copyText(text, okMsg){
+  const done = ()=>toast(okMsg || "已复制");
+  const fallback = ()=>{
+    try{
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta); done();
+    }catch(e){ toast("复制失败，请手动选中"); }
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(fallback);
+  } else fallback();
+}
+
+/* ---------------------- 老虎机渲染 ---------------------- */
+
+const SLOT_DEFS = [
+  {key:"theme", label:"THEME / 主题"},
+  {key:"mech",  label:"MECHANIC / 核心机制"},
+  {key:"form",  label:"FORMAT / 产品形态"},
+  {key:"rule",  label:"CONSTRAINT / 强制约束"},
+  {key:"aud",   label:"TARGET / 目标用户"},
+  {key:"twist", label:"TWIST / 意外转折"},
+  {key:"vibe",  label:"TONE / 气质"},
+  {key:"scope", label:"SCOPE / 规模"},
+];
+
+function renderSlots(){
+  $("#slots").innerHTML = SLOT_DEFS.map((d,i)=>`
+    <div class="slot" data-key="${d.key}">
+      <div class="no">${pad2(i+1)}</div>
+      <div class="body">
+        <div class="k">${d.label}</div>
+        <div class="v" data-val>—</div>
+      </div>
+      <div class="tools">
+        <button data-act="one" title="只重抽这一格">R</button>
+        <button data-act="lock" title="锁定 / 解锁">L</button>
+      </div>
+    </div>`).join("");
+}
+
+function paintSlots(c, animateKeys){
+  SLOT_DEFS.forEach(d=>{
+    const el = document.querySelector('.slot[data-key="'+d.key+'"]');
+    const v = el.querySelector("[data-val]");
+    const pair = c[d.key];
+    v.innerHTML = `<span>${esc(pair[0])}</span>` + (pair[1] ? `<span class="tagline">${esc(pair[1])}</span>` : "");
+    el.classList.toggle("locked", !!state.locks[d.key]);
+    const lockBtn = el.querySelector('[data-act="lock"]');
+    lockBtn.textContent = state.locks[d.key] ? "L*" : "L";
+    lockBtn.classList.toggle("on", !!state.locks[d.key]);
+    if(animateKeys && animateKeys.includes(d.key)){
+      el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+    }
+  });
+}
+
+const GLYPHS = "▓▒░#@%&$*+=<>/\\|01";
+function glitchReadout(el, finalHTML, ms){
+  const t0 = performance.now();
+  const finalText = el.textContent;
+  function frame(now){
+    const p = (now - t0)/ms;
+    if(p >= 1){ el.innerHTML = finalHTML; return; }
+    el.textContent = finalText.replace(/./g, ch => ch === " " ? " " : (Math.random() < .55 ? GLYPHS[rand(GLYPHS.length)] : ch));
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+function slotRattle(keys){
+  keys.forEach(k=>document.querySelector('.slot[data-key="'+k+'"]').classList.add("spin"));
+  const t = setInterval(()=>tick(), 50);
+  return ()=>{ clearInterval(t); keys.forEach(k=>document.querySelector('.slot[data-key="'+k+'"]').classList.remove("spin")); };
+}
+
+let rolling = false;
+function roll(force){
+  if(rolling) return;
+  rolling = true;
+  $("#rollBtn").disabled = true;
+
+  const next = newRoll(force);
+  const changed = SLOT_DEFS.map(d=>d.key).filter(k=>!state.current || state.current[k] !== next[k]);
+  const dur = changed.length ? 420 : 150;
+  const stop = changed.length ? slotRattle(changed) : null;
+
+  setTimeout(()=>{
+    if(stop) stop();
+    state.current = next;
+    paintSlots(next, changed);
+    renderBrief(buildBrief(next));
+    ding();
+    rolling = false;
+    $("#rollBtn").disabled = false;
+    addNote(next, true);
+  }, dur);
+}
+
+function renderBrief(b){
+  const tg = (t,cls)=>`<span class="badge ${cls||''}">${esc(t)}</span>`;
+  const ul = (arr,cls)=>`<ul>${arr.map(x=>`<li>${x}</li>`).join("")}</ul>`;
+  $("#briefStamp").textContent = "NO." + pad2(rand(99)) + "-" + String(rand(9000)+1000);
+  $("#briefHost").innerHTML = `
+  <article class="brief" id="briefCard">
+    <div class="brief-top">
+      <h2 class="codename" id="codenameEl">${esc(b.codename)}</h2>
+      <div class="badges">
+        ${tg("FORMAT:"+b.tags.form,"m")}${tg("TONE:"+b.tags.vibe,"c")}${tg("SCOPE:"+b.tags.scope)}
+        ${tg("MECH:"+b.tags.mech,"g")}${tg("THEME:"+b.tags.theme,"a")}
+      </div>
+    </div>
+    <p class="pitch">${b.pitch}</p>
+
+    <div class="body-grid">
+      <div class="block"><div class="t"><b>01</b> 核心动作与产出</div>${ul(b.core)}</div>
+      <div class="block rule"><div class="t"><b>02</b> 强制约束 / 题眼</div>${ul(b.rules)}</div>
+      <div class="block ok"><div class="t"><b>03</b> MVP · 先做这三件</div>${ul(b.mvp)}</div>
+      <div class="block"><div class="t"><b>04</b> 扩展方向</div>${ul(b.ext)}</div>
+      <div class="block ok"><div class="t"><b>05</b> 成立判据</div>${ul(b.success)}</div>
+      <div class="block no"><div class="t"><b>06</b> 雷区</div>${ul(b.avoid)}</div>
+      <div class="block"><div class="t"><b>07</b> 名字候选</div><div class="names">${b.names.map(n=>`<span>${esc(n)}</span>`).join("")}</div></div>
+      <div class="block"><div class="t"><b>08</b> 加分项</div>${ul(b.bonus)}</div>
+      <div class="block"><div class="t"><b>09</b> 动手前先答三个问题</div>${ul(b.questions)}</div>
+    </div>
+
+    <div class="block" style="border-right:0">
+      <div class="t"><b>10</b> 开工顺序</div>
+      <ol class="steps">${b.steps.map(s=>`<li>${s}</li>`).join("")}</ol>
+    </div>
+
+    <div class="cmd" style="border-top:1px solid var(--line)">
+      <button class="c primary" id="againBtn">▶ 再来一张</button>
+      <button class="c" id="copyBriefBtn">▤ 复制全文</button>
+      <button class="c" id="mdBriefBtn">↓ 存 .md</button>
+      <span style="margin-left:auto;font-size:10.5px;letter-spacing:1px;color:var(--ink-lo)">AUTO-SAVED TO ARCHIVE</span>
+    </div>
+  </article>`;
+
+  const cd = $("#codenameEl");
+  cd.classList.remove("glitch"); void cd.offsetWidth; cd.classList.add("glitch");
+
+  $("#againBtn").onclick = ()=>roll(false);
+  $("#copyBriefBtn").onclick = ()=>copyText(briefToText(b), "构思已复制");
+  $("#mdBriefBtn").onclick = ()=>{ download("狗屎机-"+b.tags.theme+".md", briefToMd(b)); toast("Markdown 已下载"); };
+}
+
+function briefToText(b){
+  const L = [];
+  L.push(b.codename, "");
+  L.push("【一句话】"+plain(b.pitch), "");
+  L.push("【核心动作与产出】"); b.core.forEach(x=>L.push("- "+plain(x)));
+  L.push("", "【强制约束】"); b.rules.forEach(x=>L.push("- "+plain(x)));
+  L.push("", "【MVP】"); b.mvp.forEach(x=>L.push("- "+plain(x)));
+  L.push("", "【扩展方向】"); b.ext.forEach(x=>L.push("- "+plain(x)));
+  L.push("", "【成立判据】"); b.success.forEach(x=>L.push("- "+plain(x)));
+  L.push("", "【雷区】"); b.avoid.forEach(x=>L.push("- "+plain(x)));
+  L.push("", "【开工顺序】"); b.steps.forEach((x,i)=>L.push((i+1)+". "+plain(x)));
+  L.push("", "标签："+b.tags.form+" / "+b.tags.vibe+" / "+b.tags.scope+" / "+b.tags.mech+" / "+b.tags.theme);
+  return L.join("\n");
+}
+
+function briefToMd(b){
+  const md = ["# "+b.codename, "", plain(b.pitch), "",
+    "> "+b.tags.form+" · "+b.tags.vibe+" · "+b.tags.scope+" · 机制："+b.tags.mech+" · 主题："+b.tags.theme, ""];
+  const sec = (t,arr,ordered)=>{
+    md.push("## "+t);
+    arr.forEach((x,i)=>md.push((ordered?(i+1)+". ":"- ")+plain(x)));
+    md.push("");
+  };
+  sec("核心动作与产出", b.core);
+  sec("强制约束（题眼）", b.rules);
+  sec("MVP：先做这三件", b.mvp);
+  sec("做出来之后往哪长", b.ext);
+  sec("怎么算成立", b.success);
+  sec("雷区", b.avoid);
+  sec("开工顺序", b.steps, true);
+  md.push("## 名字候选", b.names.map(n=>"`"+n+"`").join(" · "), "", "---", "*由 狗屎机 GX-01 生成*");
+  return md.join("\n");
+}
+
+function download(name, text){
+  const blob = new Blob([text], {type:"text/markdown;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+
+/* ---------------------- 灵感本 ---------------------- */
+
+function addNote(c, silent){
+  const b = buildBrief(c);
+  state.notebook.unshift({
+    id: Date.now()+"-"+rand(1000),
+    codename: b.codename,
+    theme: b.tags.theme, form: b.tags.form, mech: b.tags.mech, vibe: b.tags.vibe, scope: b.tags.scope,
+    pitch: plain(b.pitch),
+    markdown: briefToMd(b),
+    time: new Date().toLocaleString("zh-CN",{hour12:false}),
+  });
+  if(state.notebook.length > 200) state.notebook.length = 200;
+  save();
+  renderNotebook();
+  if(!silent) toast("已入档");
+}
+
+function renderNotebook(){
+  $("#nbCount").textContent = state.notebook.length;
+  $("#nbCount2").textContent = pad2(state.notebook.length);
+  const host = $("#nbHost");
+  if(!state.notebook.length){
+    host.innerHTML = `<div class="blank"><b>[ NULL ]</b>档案区为空。<br />去 ROLL 掷一张构思卡，会自动入档。</div>`;
+    return;
+  }
+  host.innerHTML = state.notebook.map(n=>`
+    <div class="nb-item" data-id="${esc(n.id)}">
+      <div class="nb-h">
+        <span class="nb-n">${esc(n.codename)}</span>
+        <span class="nb-d">${esc(n.time)}</span>
+        <span class="nb-tools">
+          <button data-act="copy">COPY</button>
+          <button data-act="md">.MD</button>
+          <button data-act="del">DEL</button>
+        </span>
+      </div>
+      <div class="nb-p">${esc(n.pitch)}</div>
+      <div class="nb-tags">
+        <span>${esc(n.form)}</span><span>机制:${esc(n.mech)}</span><span>主题:${esc(n.theme)}</span>
+        <span>${esc(n.vibe)}</span><span>${esc(n.scope)}</span>
+      </div>
+    </div>`).join("");
+}
+
+$("#nbHost").addEventListener("click", e=>{
+  const btn = e.target.closest("button[data-act]");
+  if(!btn) return;
+  const card = e.target.closest(".nb-item");
+  const item = state.notebook.find(n=>n.id === card.dataset.id);
+  if(!item) return;
+  const act = btn.dataset.act;
+  if(act === "copy") copyText(item.markdown, "已复制整份构思");
+  if(act === "md"){ download("狗屎机-"+item.theme+".md", item.markdown); toast("已下载"); }
+  if(act === "del"){
+    state.notebook = state.notebook.filter(n=>n.id !== item.id);
+    save(); renderNotebook(); toast("已删除");
+  }
+});
+
+/* ---------------------- 转盘 ---------------------- */
+/* 本地终端配色，无渐变：与 style-seed「赛博朋克」一致 */
+const WHEEL_COLORS = ["#00FF41","#FF0080","#00FFFF","#FFB000","#FF3B30","#B4FF39","#FF6EC7","#39FF88"];
+
+const WHEEL_GROUPS = [
+  {name:"FORMAT", kind:"form", items:FORMS},
+  {name:"MECHANIC", kind:"mech", items:MECHANICS},
+  {name:"THEME", kind:"theme", items:THEMES},
+  {name:"CONSTRAINT", kind:"rule", items:CONSTRAINTS},
+  {name:"TONE", kind:"vibe", items:VIBES.map(v=>[v,""])},
+];
+
+function wheelItems(){
+  const g = WHEEL_GROUPS[state.wheel.group];
+  if(g.items === FORMS && state.wheelCustom && state.wheelCustom.length) return state.wheelCustom;
+  return g.items;
+}
+
+function activeWheelItems(){
+  const a = wheelItems().filter(it=>!it.__off);
+  return a.length ? a : wheelItems();
+}
+
+function renderPicker(){
+  $("#picker").innerHTML = WHEEL_GROUPS.map((g,i)=>{
+    const custom = g.items === FORMS && state.wheelCustom;
+    return `<button class="${i===state.wheel.group?'active':''}" data-i="${i}">${g.name}<i>${custom?state.wheelCustom.length:g.items.length}</i></button>`;
+  }).join("");
+}
+
+function renderItems(){
+  const items = wheelItems();
+  const isForms = WHEEL_GROUPS[state.wheel.group].items === FORMS;
+  const active = activeWheelItems();
+  const hitIdx = state.wheel.last && !state.wheel.spinning ? active.indexOf(state.wheel.last) : -1;
+  $("#items").innerHTML = items.map((it,i)=>{
+    const ai = active.indexOf(it);
+    return `<div class="item${it.__off?" off":""}${ai===hitIdx&&hitIdx>=0?" hit":""}" data-i="${i}">
+      <span class="ix">${it.__off?"--":pad2(i+1)}</span>
+      <span class="tx">${esc(it[0])}${it[1]?` <s>// ${esc(it[1])}</s>`:""}</span>
+      <span class="tools">
+        <button data-act="toggle" title="启用 / 停用">${it.__off?"[ ]":"[x]"}</button>
+        ${isForms?`<button data-act="rm" title="删除">×</button>`:""}
+      </span>
+    </div>`;
+  }).join("");
+}
+
+function drawWheel(){
+  const cv = $("#wheel"), ctx = cv.getContext("2d");
+  const S = cv.width, R = S/2, cx = R, cy = R;
+  const items = activeWheelItems();
+  const n = items.length;
+  ctx.clearRect(0,0,S,S);
+
+  // 外刻度环
+  ctx.strokeStyle = "rgba(0,255,65,.22)";
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx,cy,R-8,0,Math.PI*2); ctx.stroke();
+  for(let i=0;i<72;i++){
+    const a = (i/72)*Math.PI*2;
+    const long = i%6===0;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*(R-14), cy+Math.sin(a)*(R-14));
+    ctx.lineTo(cx+Math.cos(a)*(R-(long?34:22)), cy+Math.sin(a)*(R-(long?34:22)));
+    ctx.strokeStyle = long ? "rgba(0,255,65,.5)" : "rgba(0,255,65,.18)";
+    ctx.lineWidth = long ? 3 : 1.5;
+    ctx.stroke();
+  }
+
+  const seg = Math.PI*2/n;
+  const rot = state.wheel.rotation;
+  for(let i=0;i<n;i++){
+    const a0 = rot + i*seg, a1 = a0 + seg;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,R-40,a0,a1);
+    ctx.closePath();
+    ctx.fillStyle = i%2 ? "#0F0F0F" : "#141414";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,.10)";
+    ctx.stroke();
+
+    // 每段外侧霓虹弧：仅描边，无渐变无模糊（性能友好）
+    ctx.beginPath();
+    ctx.arc(cx,cy,R-42,a0+seg*0.06,a1-seg*0.06);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = WHEEL_COLORS[i%WHEEL_COLORS.length];
+    ctx.globalAlpha = .85;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // 段内游标点
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(a0+seg/2)*(R-58), cy + Math.sin(a0+seg/2)*(R-58), 4, 0, Math.PI*2);
+    ctx.fillStyle = WHEEL_COLORS[i%WHEEL_COLORS.length];
+    ctx.fill();
+
+    // 文本：终端等宽，沿半径排布
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(a0 + seg/2);
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#D8D8D8";
+    const fs = Math.max(19, Math.min(31, 760/n + 12));
+    ctx.font = `600 ${fs}px "Cascadia Mono","Consolas","Microsoft YaHei",monospace`;
+    let t = items[i][0];
+    const maxLen = Math.max(4, Math.floor((R-150)/(fs*0.62)));
+    if(t.length > maxLen) t = t.slice(0, maxLen-1)+"…";
+    ctx.fillText(t, R-74, 0);
+    ctx.restore();
+  }
+
+  // 内环 + 中心十字
+  ctx.beginPath(); ctx.arc(cx,cy,R-40,0,Math.PI*2);
+  ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,R*0.30,0,Math.PI*2);
+  ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(0,255,65,.35)"; ctx.stroke();
+}
+
+function spin(){
+  if(state.wheel.spinning) return;
+  const items = activeWheelItems();
+  if(items.length < 2){ toast("至少要保留两个元素"); return; }
+  state.wheel.spinning = true;
+  state.wheel.last = null;
+  $("#wheelResult").classList.add("hidden");
+  renderItems();
+
+  const n = items.length, seg = Math.PI*2/n;
+  const target = rand(n);
+  const want = -Math.PI/2 - seg*(target + 0.5);
+  const turns = 5 + rand(3);
+  const from = state.wheel.rotation;
+  const final = want + Math.PI*2*turns + (from - (from % (Math.PI*2)));
+  const dur = 3300;
+  const t0 = performance.now();
+  let lastTick = 0;
+
+  function frame(now){
+    const p = Math.min(1, (now - t0)/dur);
+    const e = 1 - Math.pow(1-p, 4);
+    state.wheel.rotation = from + (final - from)*e;
+    drawWheel();
+    if(p - lastTick > 0.03){ tick(); lastTick = p; }
+    if(p < 1){ requestAnimationFrame(frame); }
+    else{
+      state.wheel.spinning = false;
+      const hit = items[target % items.length];
+      state.wheel.last = hit;
+      const out = $("#wheelResult");
+      $("#wheelValue").textContent = hit[0];
+      $("#wheelDesc").textContent = hit[1] || "";
+      out.classList.remove("hidden");
+      out.classList.remove("flash"); void out.offsetWidth; out.classList.add("flash");
+      renderItems();
+      ding();
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------------------- 命题 ---------------------- */
+
+function drawPrompt(){
+  state.prompt = pick(PROMPTS);
+  $("#promptHost").innerHTML = `
+    <div class="prop">
+      <div class="lb">// PROMPT · 唯一约束条件</div>
+      <div class="tx">${esc(state.prompt)}</div>
+    </div>
+    <div class="cmd" style="border:0;padding:14px 0 0">
+      <button class="c" id="promptAgainBtn">↻ 再抽一句</button>
+    </div>`;
+  $("#promptAgainBtn").onclick = drawPrompt;
+  ding();
+}
+
+/* ---------------------- 模式 ---------------------- */
+
+function setMode(m){
+  state.mode = m;
+  $$("#switch button").forEach(b=>b.classList.toggle("active", b.dataset.mode === m));
+  ["slots","wheel","prompts","notebook"].forEach(k=>{
+    $("#stage-"+k).classList.toggle("hidden", k !== m);
+  });
+  if(m === "wheel"){ renderPicker(); renderItems(); drawWheel(); }
+  if(m === "notebook") renderNotebook();
+}
+
+/* ---------------------- 启动 ---------------------- */
+
+function boot(){
+  renderSlots();
+  renderNotebook();
+  roll(true);
+  setMode("slots");
+
+  $("#soundBtn").classList.toggle("on", state.sound);
+  $("#soundBtn").textContent = state.sound ? "SND:ON" : "SND:OFF";
+  $("#soundBtn").onclick = ()=>{
+    state.sound = !state.sound; save();
+    $("#soundBtn").classList.toggle("on", state.sound);
+    $("#soundBtn").textContent = state.sound ? "SND:ON" : "SND:OFF";
+    if(state.sound) ding();
+  };
+  $("#helpBtn").onclick = ()=>toast("掷一次 → 锁住喜欢的格子 → 重抽其余 → 把强制约束当真");
+
+  $$("#switch button").forEach(b=> b.onclick = ()=>setMode(b.dataset.mode));
+  window.addEventListener("resize", ()=>{ drawWheel(); });
+
+  $("#rollBtn").onclick = ()=>roll(false);
+  $("#rollAllBtn").onclick = ()=>{
+    state.locks = {theme:false,mech:false,form:false,rule:false,aud:false,twist:false,vibe:false,scope:false};
+    roll(true);
+  };
+  $("#lockAllBtn").onclick = ()=>{
+    const anyUnlocked = SLOT_DEFS.some(d=>!state.locks[d.key]);
+    SLOT_DEFS.forEach(d=>state.locks[d.key] = anyUnlocked);
+    if(state.current) paintSlots(state.current, []);
+    $("#lockAllBtn").textContent = anyUnlocked ? "▣ 取消全锁" : "▣ 全锁定";
+    toast(anyUnlocked ? "已全部锁定，只重抽解锁格" : "已全部解锁");
+  };
+  $("#slots").addEventListener("click", e=>{
+    const btn = e.target.closest("button[data-act]");
+    if(!btn) return;
+    const key = e.target.closest(".slot").dataset.key;
+    if(btn.dataset.act === "lock"){
+      state.locks[key] = !state.locks[key];
+      if(state.current) paintSlots(state.current, []);
+      beep(state.locks[key]?1200:400, 0.05, "square", 0.03);
+      return;
+    }
+    if(rolling || !state.current) return;
+    const el = document.querySelector('.slot[data-key="'+key+'"]');
+    el.classList.add("spin");
+    tick(); setTimeout(tick, 80);
+    setTimeout(()=>{
+      el.classList.remove("spin");
+      state.current[key] = drawOne(key);
+      paintSlots(state.current, [key]);
+      const valEl = document.querySelector('.slot[data-key="'+key+'"] .v');
+      const finalHTML = valEl.innerHTML;
+      glitchReadout(valEl, finalHTML, 180);
+      renderBrief(buildBrief(state.current));
+      ding();
+      addNote(state.current, true);
+    }, 260);
+  });
+
+  $("#hubBtn").onclick = spin;
+  $("#picker").addEventListener("click", e=>{
+    const c = e.target.closest("button[data-i]"); if(!c) return;
+    state.wheel.group = Number(c.dataset.i);
+    state.wheel.last = null;
+    renderPicker(); renderItems(); drawWheel();
+  });
+  $("#items").addEventListener("click", e=>{
+    const btn = e.target.closest("button[data-act]"); if(!btn) return;
+    const row = e.target.closest(".item");
+    const i = Number(row.dataset.i);
+    const list = wheelItems();
+    if(btn.dataset.act === "toggle"){
+      list[i].__off = !list[i].__off;
+      state.wheel.last = null;
+      renderItems(); renderPicker(); drawWheel();
+    }
+    if(btn.dataset.act === "rm"){
+      state.wheelCustom = list.filter((_,k)=>k!==i).map(x=>[x[0], x[1]]);
+      state.wheel.last = null;
+      renderPicker(); renderItems(); drawWheel(); save();
+    }
+  });
+  function addWheelItem(){
+    const v = $("#newItem").value.trim();
+    if(!v) return;
+    if(!state.wheelCustom) state.wheelCustom = FORMS.map(f=>[f[0],f[1]]);
+    state.wheelCustom.push([v, "自定义元素"]);
+    $("#newItem").value = "";
+    renderPicker(); renderItems(); drawWheel(); save();
+    toast("已写入元素库");
+  }
+  $("#addItemBtn").onclick = addWheelItem;
+  $("#newItem").addEventListener("keydown", e=>{ if(e.key === "Enter") addWheelItem(); });
+  $("#resetItemsBtn").onclick = ()=>{
+    if(WHEEL_GROUPS[state.wheel.group].items === FORMS){ state.wheelCustom = null; save(); }
+    wheelItems().forEach(it=>it.__off = false);
+    state.wheel.last = null;
+    renderPicker(); renderItems(); drawWheel(); toast("本组已重置");
+  };
+  $("#spinAgainBtn").onclick = spin;
+  $("#useAsFormBtn").onclick = ()=>{
+    if(!state.wheel.last) return;
+    const key = WHEEL_GROUPS[state.wheel.group].kind;
+    if(!state.current) roll(true);
+    state.current[key] = [state.wheel.last[0], state.wheel.last[1]];
+    state.locks[key] = true;
+    paintSlots(state.current, [key]);
+    renderBrief(buildBrief(state.current));
+    setMode("slots");
+    toast("已写入「"+SLOT_DEFS.find(d=>d.key===key).label+"」并锁定");
+  };
+
+  $("#promptBtn").onclick = drawPrompt;
+  $("#promptSaveBtn").onclick = ()=>{
+    if(!state.prompt){ toast("先抽一句命题"); return; }
+    state.notebook.unshift({
+      id: Date.now()+"-p", codename: "命题",
+      theme:"—", form:"—", mech:"—", vibe:"—", scope:"—",
+      pitch: state.prompt, markdown: "# 命题\n\n"+state.prompt,
+      time: new Date().toLocaleString("zh-CN",{hour12:false}),
+    });
+    save(); renderNotebook(); toast("已入档");
+  };
+
+  $("#clearBtn").onclick = ()=>{
+    if(!state.notebook.length) return;
+    if(confirm("清空档案区里的 "+state.notebook.length+" 条记录？无法恢复。")){
+      state.notebook = []; save(); renderNotebook(); toast("已清空");
+    }
+  };
+  $("#exportBtn").onclick = ()=>{
+    if(!state.notebook.length){ toast("档案区为空"); return; }
+    const md = state.notebook.map(n=>n.markdown).join("\n\n---\n\n");
+    download("狗屎机-构思集.md", "# 我的构思集\n\n共 "+state.notebook.length+" 条\n\n---\n\n"+md);
+    toast("已导出 Markdown");
+  };
+
+  window.addEventListener("keydown", e=>{
+    if(e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+    if(e.code === "Space"){
+      e.preventDefault();
+      if(state.mode === "slots") roll(false);
+      else if(state.mode === "wheel") spin();
+      else if(state.mode === "prompts") drawPrompt();
+    }
+    if(e.key === "r" && state.mode === "slots") roll(true);
+    if(e.key === "1") setMode("slots");
+    if(e.key === "2") setMode("wheel");
+    if(e.key === "3") setMode("prompts");
+    if(e.key === "4") setMode("notebook");
+  });
+}
+
+boot();
+</script>
+</body>
+</html>

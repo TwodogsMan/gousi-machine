@@ -1,0 +1,10 @@
+# 系统 / 编辑器
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+
+# 项目自身：单文件应用，无构建产物。以下为本地临时文件
+_*.mjs
+_*.js
+*.local.md
