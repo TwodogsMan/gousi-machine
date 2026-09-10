@@ -1,8 +1,16 @@
 # 狗屎机 // GX-01 · 灵感抽取终端
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-00FF41.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-v1.0.0-FF0080.svg)](https://github.com/TwodogsMan/gousi-machine/releases)
+[![No Dependencies](https://img.shields.io/badge/dependencies-0-00FFFF.svg)](#)
+[![Offline](https://img.shields.io/badge/network-0%20requests-FFB000.svg)](#)
+
 灵感枯竭时用的抽取工具：**投骰子 / 转转盘**，吐出主题、机制、形态、强制约束，拼成一张能直接开工的构思卡。
 
 界面是一台离线终端的样式——全直角、等宽字、终端绿 + 品红、扫描线。设计规范见 `DESIGN.md`。
+
+> **零依赖、零构建、零网络请求。** 单个 HTML 文件，双击即用，断网可用，数据只写在本机 localStorage。
+> 适合：卡在"今天做什么"的独立开发者 / 想练手但不知道做什么项目的人 / 需要随机约束来破局的人。
 
 ## 怎么打开
 
@@ -85,3 +93,33 @@ node tools/check.mjs
 | `DESIGN.md` | **本项目界面规范与规则的唯一权威来源**：设计 token 全集、组件规范、10 条 Don'ts、验收清单、踩坑记录 |
 | `tools/check.mjs` | 可执行的验收清单，`node tools/check.mjs`，必须 16/16 全过 |
 | `~/.dsh/AGENTS.md` | 全局规则（本机所有项目生效）：11 条反 AI 味硬黑名单、工程质量底线、环境事实。项目内不再放 `AGENTS.md` |
+
+## 许可证
+
+[MIT](LICENSE) © 2025 KeMing。可任意使用、修改、分发、商用，只需保留版权声明。
+
+---
+
+## 仓库元数据（维护者备忘）
+
+GitHub 的 **About** 区域决定别人能不能搜到、点进来第一眼看到什么。以下为准备好的文案。
+
+**Description**（搜索结果显示的就是这行）：
+
+```
+离线灵感抽取终端 · 投骰子/转盘抽出主题×机制×形态×强制约束，生成可直接开工的构思卡 · 单文件零依赖
+```
+
+**Topics**（在仓库页右侧 ⚙️ 里粘贴，最多 20 个）：
+
+```
+idea-generator  brainstorming  creativity-tool  inspiration  randomizer
+spinner-wheel  vanilla-js  single-file  offline-first  no-dependencies
+cyberpunk  web-app  localstorage  indie-hacker  side-project
+game-design  productivity  chinese  zero-build  mit-license
+```
+
+选词理由：前 4 个是**别人真会搜**的词（idea generator / brainstorming 是英文区高频搜索），`indie-hacker` / `side-project` / `game-design` 是**目标人群聚集的标签**，`single-file` / `offline-first` / `no-dependencies` / `zero-build` 是**这个项目的真实差异点**（很多人专门搜这类"拿来就能跑"的工具）。
+
+> ⚠️ 只打 tag 不会带来曝光。**git tag** 是版本标记，**GitHub Topics** 才是发现机制。两者都在 2025 年做过。
+
