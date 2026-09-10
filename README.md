@@ -55,7 +55,7 @@ const PROMPTS = ["一句话命题", ...];
 node tools/check.mjs
 ```
 
-当前 **14/14 全部通过**：反 AI 味红线（圆角 / 渐变 / 毛玻璃 / emoji / 浮起阴影 / 硬编码色）、可访问性（focus-visible、reduced-motion）、离线（零外链）、响应式断点、逻辑回归（3000 张卡无空字段无 `undefined`、锁定语义正确）。任何一项不过就是没做完。
+当前 **16/16 全部通过**：反 AI 味红线（圆角 / 渐变 / 毛玻璃 / emoji / 浮起阴影 / 硬编码色）、可访问性（focus-visible、reduced-motion）、离线（零外链）、响应式断点、逻辑回归（3000 张卡无空字段无 `undefined`、锁定语义正确）、工具名一致性。任何一项不过就是没做完。
 
 ## 设计来源
 
@@ -83,5 +83,5 @@ node tools/check.mjs
 | 文件 | 作用 |
 |---|---|
 | `DESIGN.md` | **本项目界面规范与规则的唯一权威来源**：设计 token 全集、组件规范、10 条 Don'ts、验收清单、踩坑记录 |
-| `tools/check.mjs` | 可执行的验收清单，`node tools/check.mjs`，必须 14/14 全过 |
+| `tools/check.mjs` | 可执行的验收清单，`node tools/check.mjs`，必须 16/16 全过 |
 | `~/.dsh/AGENTS.md` | 全局规则（本机所有项目生效）：11 条反 AI 味硬黑名单、工程质量底线、环境事实。项目内不再放 `AGENTS.md` |

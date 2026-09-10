@@ -3,7 +3,7 @@
 // 用法：node tools/check.mjs
 //
 // 它是 DESIGN.md「附：项目专属须知」验收清单与 index.html 逻辑回归的可执行版本。
-// 改完 UI 后必须跑，14/14 全通过才算完成。（通用反 AI 味规则见全局 ~/.dsh/AGENTS.md）
+// 改完 UI 后必须跑，16/16 全通过才算完成。（通用反 AI 味规则见全局 ~/.dsh/AGENTS.md）
 //
 // 设计原则：只读、不修改任何文件；把文档里的承诺变成可执行的断言，
 //           避免「不许有 AI 味」这类约束随时间退化成口号。
@@ -131,13 +131,16 @@ const NAME = "狗屎机", OLD = "构思机";
 const docs = ["README.md", "DESIGN.md"].map(f => {
   try { return fs.readFileSync(new URL("../" + f, import.meta.url), "utf8"); } catch { return ""; }
 }).join("\n");
+// 去掉引号内的「提及」（如 `「构思机」`、`**构思机**`），只查真正的「使用」，
+// 否则复制的验收输出里那句「无构思机残留」会把自己判为违规。
+const docsBare = docs.replace(/[「『"“][^」』"”]*[」』"”]/g, "").replace(/\*\*[^*]*\*\*/g, "");
 const nameIssues = [];
 if (!html.includes(`<title>${NAME}`)) nameIssues.push("<title> 未用新名");
-if (!new RegExp(`<h1>${NAME}`).test(html)) nameIssues.push("<h1> 未用新名");
+if (!new RegExp(`<h1>\\s*${NAME}`).test(html)) nameIssues.push("<h1> 未用新名");
 if (html.includes(OLD)) nameIssues.push("index.html 仍残留旧名");
-if (docs.includes(OLD)) nameIssues.push("README/DESIGN 仍残留旧名");
+if (docsBare.includes(OLD)) nameIssues.push("README/DESIGN 仍残留旧名");
 if (!docs.includes(NAME)) nameIssues.push("README/DESIGN 未出现新名");
-check("工具名一致（防漂移）", nameIssues.length === 0, nameIssues.join("; ") || `「${NAME}」在 HTML + 文档中一致, 无「${OLD}」残留`);
+check("工具名一致（防漂移）", nameIssues.length === 0, nameIssues.join("; ") || `「${NAME}」在 HTML + 文档中一致, 无旧名残留`);
 
 /* localStorage key 必须保持稳定，改名不得清空用户数据 */
 check("localStorage key 稳定", /gousi-machine-v1/.test(js), /gousi-machine-v1/.test(js) ? "仍为 gousi-machine-v1（改名不丢用户数据）" : "被改动，会丢数据");
