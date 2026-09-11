@@ -807,7 +807,7 @@ function buildBrief(c){
 
   const pitch =
     `给<b>${aud}</b>做一个<b>${formName}</b>：围绕<b>「${themeName}」</b>，用<b>「${mech}」</b>的机制，` +
-    `把${themeNote}这件事重新做一遍。整体气质偏向<b>${vibe}</b>，规模是<b>${scope}</b>。`;
+    `把「${themeNote}」这件事重新做一遍。整体气质偏向<b>${vibe}</b>，规模是<b>${scope}</b>。`;
 
   const names = sample(["拨片","刻度","回执","编号","体温计","信箱","收据","星图","磁带","锈","补丁","小票","候车厅","空白页","回声壁","第七格","杂音","备忘录","暗号","拾荒袋"], 3);
 
@@ -1020,7 +1020,8 @@ function renderBrief(b){
     <div class="cmd" style="border-top:1px solid var(--line)">
       <button class="c primary" id="againBtn">▶ 再来一张</button>
       <button class="c" id="copyBriefBtn">▤ 复制全文</button>
-      <button class="c" id="mdBriefBtn">↓ 存 .md</button>
+      <button class="c" id="mdHumanBtn" title="叙事版：给人读，讲清为什么这么做">↓ 导出·人看</button>
+      <button class="c" id="mdAgentBtn" title="规范版：给 AI agent 直接执行，含可核对验收标准">↓ 导出·agent 执行</button>
       <span style="margin-left:auto;font-size:10.5px;letter-spacing:1px;color:var(--ink-lo)">AUTO-SAVED TO ARCHIVE</span>
     </div>
   </article>`;
@@ -1030,7 +1031,8 @@ function renderBrief(b){
 
   $("#againBtn").onclick = ()=>roll(false);
   $("#copyBriefBtn").onclick = ()=>copyText(briefToText(b), "构思已复制");
-  $("#mdBriefBtn").onclick = ()=>{ download("狗屎机-"+b.tags.theme+".md", briefToMd(b)); toast("Markdown 已下载"); };
+  $("#mdHumanBtn").onclick = ()=>{ download("构思-"+b.tags.theme+".md", briefToMd(b)); toast("已导出人看版"); };
+  $("#mdAgentBtn").onclick = ()=>{ download("SPEC-"+b.tags.theme+".md", briefToAgentMd(b)); toast("已导出 agent 执行版"); };
 }
 
 function briefToText(b){
@@ -1063,8 +1065,99 @@ function briefToMd(b){
   sec("怎么算成立", b.success);
   sec("雷区", b.avoid);
   sec("开工顺序", b.steps, true);
-  md.push("## 名字候选", b.names.map(n=>"`"+n+"`").join(" · "), "", "---", "*由 狗屎机 GX-01 生成*");
+  md.push("## 名字候选", b.names.map(n=>"`"+n+"`").join(" · "), "", "---", "*由 狗屎机 GX-01 生成 · 人看版*");
   return md.join("\n");
+}
+
+/* =====================================================================
+   给 agent 的执行版
+   与人看版的区别（这是本函数存在的全部理由）：
+   1. YAML frontmatter —— 供程序/agent 解析，不用正则去啃正文
+   2. 祈使句 + 编号 —— 是命令不是描述，可直接当待办执行
+   3. 验收标准写成「可自动核对的形式」——每条都能落到一条命令或一个 grep
+   4. 明确 OUT OF SCOPE —— 防止 agent 自作主张扩大规模
+   5. 明确不许提问、冲突裁决顺序 —— 避免执行中途卡住或跑偏
+   ===================================================================== */
+
+function yamlStr(s){ return '"' + String(s).replace(/\\/g,"\\\\").replace(/"/g,'\\"') + '"'; }
+function yamlArr(a){ return "[" + a.map(yamlStr).join(", ") + "]"; }
+
+function briefToAgentMd(b){
+  // 从同一份 brief 数据派生纯文本，避免人看版/执行版语义漂移
+  const pitch = plain(b.pitch);
+  const plainCore = b.core.map(plain);
+  const plainMvp  = b.mvp.map(plain);
+  const plainRules= b.rules.map(plain);
+  const L = [];
+
+  L.push("---");
+  L.push("spec: gousi-machine/agent-brief");
+  L.push("spec_version: 1");
+  L.push("codename: " + yamlStr(b.codename.replace(/^[^「]*「/, "").replace(/」\s*$/, "")));
+  L.push("generated_by: \"狗屎机 GX-01\"");
+  L.push("theme: " + yamlStr(b.tags.theme));
+  L.push("mechanic: " + yamlStr(b.tags.mech));
+  L.push("format: " + yamlStr(b.tags.form));
+  L.push("tone: " + yamlStr(b.tags.vibe));
+  L.push("scope: " + yamlStr(b.tags.scope));
+  L.push("target_user: " + yamlStr(b.tags.aud));
+  L.push("hard_constraints: " + yamlArr(plainRules.map(r=>r.replace(/^硬约束：|^附加约束：/,"").replace(/（.*?）$/,""))));
+  L.push("deliverable: " + yamlStr(plainMvp[0]));
+  L.push("must_not: " + yamlArr(b.avoid.map(plain)));
+  L.push("out_of_scope: " + yamlArr(["账号体系", "后端服务", "多端同步", "数据分析与埋点", "国际化多语言", "支付与商业化"]));
+  L.push("---");
+  L.push("");
+
+  L.push("# 执行说明 / AGENT BRIEF", "");
+  L.push("你是一个执行 agent。下面的内容是**规范**，不是灵感描述——请直接照做，不要重新诠释，不要扩大范围。", "");
+
+  L.push("## 0 · 任务", "");
+  L.push(pitch, "");
+  L.push("做成 **" + b.tags.form + "**，核心机制是 **" + b.tags.mech + "**，气质 " + b.tags.vibe + "，规模 " + b.tags.scope + "。", "");
+
+  L.push("## 1 · 执行规则", "");
+  L.push("1. **只交付最小可运行版本**，不实现任何「扩展方向」里的内容。");
+  L.push("2. **不要向我提问**。信息不足时自行做最小假设，并在交付说明里列出你假设了什么。");
+  L.push("3. **硬约束优先于功能**。当功能与约束冲突时，砍功能，不破约束。");
+  L.push("4. **一次只做第 3 节的第一步**，做完停下等我确认，不要一口气做完五步。");
+  L.push("5. 冲突时优先级：硬约束 > 核心动作 > 气质 > 其他一切。");
+  L.push("");
+
+  L.push("## 2 · 硬约束（不可违反）", "");
+  plainRules.forEach((r,i)=>L.push((i+1) + ". " + r));
+  L.push("");
+  L.push("违反任意一条即视为交付失败，无论功能是否做完。", "");
+
+  L.push("## 3 · 交付步骤（按顺序执行）", "");
+  b.steps.forEach((s,i)=>L.push((i+1) + ". " + plain(s)));
+  L.push("");
+
+  L.push("## 4 · 核心动作与产出（不可省略）", "");
+  plainCore.forEach((c,i)=>L.push((i+1) + ". " + c));
+  L.push("");
+  L.push("> 去掉第 2 条这个机制，产品就应当垮掉。如果去掉后仍然成立，说明机制没放对位置。", "");
+
+  L.push("## 5 · 验收标准（逐条自查，全部可核对）", "");
+  L.push("- [ ] 交付物是一个**能直接运行**的 " + b.tags.form + "，无需构建步骤；若为网页则在浏览器打开即用");
+  L.push("- [ ] 硬约束逐条满足：" + plainRules.map(r=>"`"+r.split("（")[0]+"`").join("、"));
+  L.push("- [ ] 核心机制「" + b.tags.mech + "」可完整走通至少一轮，用假数据即可");
+  L.push("- [ ] " + plainMvp.slice(1).join("；"));
+  L.push("- [ ] 首屏**不出现**引导页、注册墙、加载 spinner");
+  L.push("- [ ] 存在一个分享/导出结果的入口");
+  L.push("- [ ] 未实现 OUT OF SCOPE 里的任何一项");
+  L.push("");
+  L.push("自查时必须**实际跑一遍**（打开页面、点完一轮），不要只读代码就勾选。", "");
+
+  L.push("## 6 · 明令禁止（做了就是错）", "");
+  b.avoid.forEach(a=>L.push("- " + plain(a)));
+  L.push("- 在验收标准未全部满足前，添加任何「扩展方向」里的功能");
+  L.push("");
+
+  L.push("## 7 · 遇到不确定时", "");
+  L.push("按「最小惊讶原则」选最容易理解的那个方案，继续做，**不要停下来提问**，把决定记在交付说明里。", "");
+  L.push("---");
+  L.push("*由 狗屎机 GX-01 生成 · agent 执行版 · spec_version 1*");
+  return L.join("\n");
 }
 
 function download(name, text){
@@ -1085,6 +1178,7 @@ function addNote(c, silent){
     theme: b.tags.theme, form: b.tags.form, mech: b.tags.mech, vibe: b.tags.vibe, scope: b.tags.scope,
     pitch: plain(b.pitch),
     markdown: briefToMd(b),
+    agentMd: briefToAgentMd(b),
     time: new Date().toLocaleString("zh-CN",{hour12:false}),
   });
   if(state.notebook.length > 200) state.notebook.length = 200;
@@ -1108,7 +1202,8 @@ function renderNotebook(){
         <span class="nb-d">${esc(n.time)}</span>
         <span class="nb-tools">
           <button data-act="copy">COPY</button>
-          <button data-act="md">.MD</button>
+          <button data-act="md" title="人看版">MD·人</button>
+          <button data-act="agent" title="agent 执行版">MD·AGENT</button>
           <button data-act="del">DEL</button>
         </span>
       </div>
@@ -1127,8 +1222,10 @@ $("#nbHost").addEventListener("click", e=>{
   const item = state.notebook.find(n=>n.id === card.dataset.id);
   if(!item) return;
   const act = btn.dataset.act;
+  const agentMd = item.agentMd || item.markdown;
   if(act === "copy") copyText(item.markdown, "已复制整份构思");
-  if(act === "md"){ download("狗屎机-"+item.theme+".md", item.markdown); toast("已下载"); }
+  if(act === "md"){ download("构思-"+item.theme+".md", item.markdown); toast("已下载人看版"); }
+  if(act === "agent"){ download("SPEC-"+item.theme+".md", agentMd); toast("已下载 agent 执行版"); }
   if(act === "del"){
     state.notebook = state.notebook.filter(n=>n.id !== item.id);
     save(); renderNotebook(); toast("已删除");
@@ -1460,9 +1557,15 @@ function boot(){
   };
   $("#exportBtn").onclick = ()=>{
     if(!state.notebook.length){ toast("档案区为空"); return; }
-    const md = state.notebook.map(n=>n.markdown).join("\n\n---\n\n");
-    download("狗屎机-构思集.md", "# 我的构思集\n\n共 "+state.notebook.length+" 条\n\n---\n\n"+md);
-    toast("已导出 Markdown");
+    const stamp = new Date().toLocaleDateString("zh-CN").replace(/\//g,"-");
+    // 两套分开导出：人看的是叙事，agent 看的是规范，混在一起两边都难用
+    const human = state.notebook.map(n=>n.markdown).join("\n\n---\n\n");
+    download("构思集-人看-"+stamp+".md",
+      "# 我的构思集（人看版）\n\n共 "+state.notebook.length+" 条\n\n---\n\n"+human);
+    const agent = state.notebook.map(n=>n.agentMd || n.markdown).join("\n\n---\n\n");
+    download("构思集-agent执行-"+stamp+".md",
+      "# 我的构思集（agent 执行版）\n\n共 "+state.notebook.length+" 份规范。每份都以 YAML frontmatter 开头，可单独拆出来投喂给 agent 执行。\n\n---\n\n"+agent);
+    toast("已导出两份（人看 / agent 执行）");
   };
 
   window.addEventListener("keydown", e=>{

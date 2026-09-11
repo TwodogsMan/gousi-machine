@@ -269,8 +269,35 @@
 ### 复验
 
 ```bash
-node tools/check.mjs   # 必须 16/16 全过，不许口头声称通过
+node tools/check.mjs        # 界面 + 逻辑：必须 16/16 全过
+node tools/check-spec.mjs   # 导出双形态：必须全部通过（加 --show 可打印样例输出）
 ```
+
+不许口头声称通过，必须贴实测输出。
+
+### 导出双形态（v1.1.0 新增）
+
+同一份构思卡导出两份，服务不同读者。**这不是换个标题，两种形态的结构完全不同**：
+
+| | 人看版 `briefToMd()` | agent 执行版 `briefToAgentMd()` |
+|---|---|---|
+| 读者 | 人 | AI agent |
+| 文体 | 叙事式，讲「为什么这么做」 | 规范式，祈使句，讲「做什么、做到什么算完」 |
+| 结构 | 标题 + 10 个语义章节 + 名字候选 | YAML frontmatter + 8 个编号章节 |
+| 机器可解析 | 否 | **是**（frontmatter 可被程序直接读取） |
+| 文件名 | `构思-<主题>.md` | `SPEC-<主题>.md` |
+| 章节目录 | 核心动作 / 强制约束 / MVP / 扩展方向 / 成立判据 / 雷区 / 开工顺序 | 0 任务 · 1 执行规则 · 2 硬约束 · 3 交付步骤 · 4 核心动作 · 5 验收标准 · 6 明令禁止 · 7 不确定时怎么办 |
+
+agent 版里几处是**专门为「能被可靠执行」设计的**，不是装饰：
+
+1. **YAML frontmatter** — agent 不用正则去啃正文，直接读结构化字段（`hard_constraints` / `deliverable` / `must_not` / `out_of_scope`）
+2. **祈使句 + 编号** — 是命令不是描述，可直接当待办清单执行
+3. **验收标准写成可核对形式** — 每条都是 `- [ ]`，且要求「必须实际跑一遍，不要只读代码就勾选」
+4. **明确 OUT OF SCOPE** — 列出账号体系/后端/多端同步等，防止 agent 自作主张扩大规模
+5. **明确不许提问 + 冲突裁决顺序** — 避免执行中途停下来等人，或方向跑偏
+6. **一次只做第一步** — 做完停下等确认，防止一口气做完五步然后全部返工
+
+两份**从同一份 brief 数据派生**（`plain()` 去标签），保证人看版和执行版语义不漂移——这是 `tools/check-spec.mjs` 会断言的。
 
 ### 历史踩坑（不要重犯）
 
@@ -279,3 +306,5 @@ node tools/check.mjs   # 必须 16/16 全过，不许口头声称通过
 3. **CSS 里硬编码颜色** → 违反「颜色只能走 token」。已把 10 处（`#001a08`、`#0d3a1a` 等暗底染色）收进 `--tint-*` / `--edge-*`。
 4. **`.claude/skills/` 层级套错** → `anthropics/skills` 原始路径是 `skills/<name>/`，直接下载会多套一层，必须拍平到 `.claude/skills/<name>/`，否则 agent 读不到。
 5. **桌面端 `git clone` 下不了** → 本机 git 远端操作要 spawn `sh.exe`/`ssh.exe`，沙箱禁命名管道（`Win32 error 5`）。下载第三方文件用 Node 原生 `fetch` + GitHub API/raw。
+6. **pitch 模板拼接出「把把」叠字** → `themeNote` 本身以「把」开头，模板又加了一个「把」，长期没被发现（断言只查 undefined，不查中文语法）。已改为 `把「${themeNote}」这件事`，并在 `check-spec.mjs` 里加了叠字断言（把把/的的/了了/是是/在在）。
+7. **PowerShell `Set-Content` 把 UTF-8 文件写成 ANSI** → 中文字符全部损坏，文件变成 `invalid UTF-8` 无法读取。**改代码文件一律用 write/edit 工具，不要用 PowerShell 的 `Set-Content` / `Out-File` 做字符串替换。**

@@ -1,7 +1,7 @@
 # 狗屎机 // GX-01 · 灵感抽取终端
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-00FF41.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v1.0.0-FF0080.svg)](https://github.com/TwodogsMan/gousi-machine/releases)
+[![Version](https://img.shields.io/badge/version-v1.1.0-FF0080.svg)](https://github.com/TwodogsMan/gousi-machine/releases)
 [![No Dependencies](https://img.shields.io/badge/dependencies-0-00FFFF.svg)](#)
 [![Offline](https://img.shields.io/badge/network-0%20requests-FFB000.svg)](#)
 
@@ -91,8 +91,31 @@ node tools/check.mjs
 | 文件 | 作用 |
 |---|---|
 | `DESIGN.md` | **本项目界面规范与规则的唯一权威来源**：设计 token 全集、组件规范、10 条 Don'ts、验收清单、踩坑记录 |
-| `tools/check.mjs` | 可执行的验收清单，`node tools/check.mjs`，必须 16/16 全过 |
+| `tools/check.mjs` | 界面 + 逻辑验收，`node tools/check.mjs`，必须 16/16 全过 |
+| `tools/check-spec.mjs` | 导出双形态验收，`node tools/check-spec.mjs`（加 `--show` 打印样例输出） |
 | `~/.dsh/AGENTS.md` | 全局规则（本机所有项目生效）：11 条反 AI 味硬黑名单、工程质量底线、环境事实。项目内不再放 `AGENTS.md` |
+
+## 导出：给人看 vs 给 agent 执行
+
+掷出一张构思卡后有两个导出按钮，**结构完全不同，不是换个标题**：
+
+| | **导出·人看** | **导出·agent 执行** |
+|---|---|---|
+| 文件名 | `构思-天气.md` | `SPEC-天气.md` |
+| 文体 | 叙事式，讲「为什么这么做」 | 规范式祈使句，讲「做到什么算完」 |
+| 结构 | 10 个语义章节（核心动作 / 强制约束 / MVP / 扩展方向 / 成立判据 / 雷区 / 开工顺序…） | YAML frontmatter + 8 个编号章节 |
+| 适合 | 自己理思路、跟人讨论、发帖 | 直接丢给 Claude Code / Cursor / Codex 执行 |
+
+**agent 版里专门为「能被可靠执行」做的设计**：
+
+- **YAML frontmatter** — agent 不用啃正文，直接读 `hard_constraints` / `deliverable` / `must_not` / `out_of_scope` 等结构化字段
+- **祈使句 + 编号** — 是命令不是描述，可直接当待办清单
+- **验收标准写成 `- [ ]` 可核对形式**，并强制要求「实际跑一遍，不要只读代码就勾选」
+- **明确 OUT OF SCOPE** — 列出账号体系 / 后端 / 多端同步，防止 agent 自作主张扩大规模
+- **明确「不许向我提问」+ 冲突裁决顺序** — 避免执行中途卡住等人
+- **一次只做第一步** — 做完停下等确认，防止一口气做完五步然后全部返工
+
+灵感本里每条也各带 `MD·人` / `MD·AGENT` 两个按钮；「导出 .md」会**一次导出两份**文件。
 
 ## 许可证
 
