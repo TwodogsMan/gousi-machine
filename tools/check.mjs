@@ -15,9 +15,6 @@ const css = (html.match(/<style>([\s\S]*)<\/style>/) || [, ""])[1];
 const js = (html.match(/<script>([\s\S]*)<\/script>/) || [, ""])[1];
 const body = html.replace(/<style>[\s\S]*?<\/style>/, "").replace(/<script>[\s\S]*?<\/script>/, "");
 
-// 允许出现在 JS 里的 canvas 配色（必须与 CSS token 同源 + 最多 3 个自定色）
-const TOKEN_COLORS = ["#00FF41", "#FF0080", "#00FFFF", "#FFB000", "#FF3B30"];
-
 const results = [];
 const check = (name, pass, detail) => results.push({ name, pass, detail });
 
@@ -51,13 +48,23 @@ const rootBlock = (css.match(/:root\s*\{[\s\S]*?\}/) || [""])[0];
 const strayHex = css.replace(rootBlock, "").match(/#[0-9a-fA-F]{3,8}\b/g) || [];
 check("CSS 无 :root 外的硬编码色", strayHex.length === 0, [...new Set(strayHex)].join(" ") || "0 处");
 
-/* 7. canvas 配色与 token 同源 */
-const wc = (js.match(/WHEEL_COLORS\s*=\s*\[[^\]]*\]/) || [""])[0];
-const wcHex = (wc.match(/#[0-9A-Fa-f]{6}/g) || []).map(s => s.toUpperCase());
-const extra = wcHex.filter(h => !TOKEN_COLORS.includes(h));
-check("canvas 配色与 token 同源",
-  TOKEN_COLORS.every(t => wcHex.includes(t)) && extra.length <= 3,
-  `token 全含=${TOKEN_COLORS.every(t => wcHex.includes(t))}, 自定色 ${extra.length} 个: ${extra.join(",") || "无"}`);
+/* 7. canvas 配色必须由 :root token 供给，不得自由发挥 */
+const rootTokens = [...rootBlock.matchAll(/(--[a-z0-9-]+)\s*:\s*(#[0-9A-Fa-f]{6})/g)]
+  .map(m => m[2].toUpperCase());
+const tokenHexes = new Set(rootTokens);
+const wheelConsts = [...js.matchAll(/const (WHEEL_[A-Z]+)\s*=\s*"(#[0-9A-Fa-f]{6})"/g)]
+  .map(m => ({ name: m[1], hex: m[2].toUpperCase() }));
+const orphanColors = wheelConsts.filter(w => !tokenHexes.has(w.hex));
+check("canvas 配色由 token 供给",
+  wheelConsts.length >= 4 && orphanColors.length === 0,
+  orphanColors.length
+    ? `未在 :root 登记: ${orphanColors.map(o => o.name + "=" + o.hex).join(", ")}`
+    : `${wheelConsts.length} 个 canvas 常量全部对应 :root token`);
+
+/* 7b. 换风格后旧配色必须彻底清掉 */
+const LEGACY = ["#00FF41", "#FF0080", "#00FFFF", "#FFB000", "#FF3B30", "#7C5CFF", "#22D3EE", "#0A0A0A"];
+const legacyHits = LEGACY.filter(h => html.toUpperCase().includes(h));
+check("无旧风格配色残留", legacyHits.length === 0, legacyHits.join(" ") || "赛博朋克色系已清空");
 
 /* 8. focus-visible 态 */
 check("有 focus-visible 态", /:focus-visible/.test(css), /:focus-visible/.test(css) ? "已定义" : "缺失");

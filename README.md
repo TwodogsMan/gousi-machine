@@ -1,13 +1,16 @@
-# 狗屎机 // GX-01 · 灵感抽取终端
+# 狗屎机 // GX-01 · 灵感赌桌
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-00FF41.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v1.1.0-FF0080.svg)](https://github.com/TwodogsMan/gousi-machine/releases)
-[![No Dependencies](https://img.shields.io/badge/dependencies-0-00FFFF.svg)](#)
-[![Offline](https://img.shields.io/badge/network-0%20requests-FFB000.svg)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-C9A227.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-v1.2.0-C8102E.svg)](https://github.com/TwodogsMan/gousi-machine/releases)
+[![No Dependencies](https://img.shields.io/badge/dependencies-0-0A2A1C.svg)](#)
+[![Offline](https://img.shields.io/badge/network-0%20requests-7A1414.svg)](#)
 
 灵感枯竭时用的抽取工具：**投骰子 / 转转盘**，吐出主题、机制、形态、强制约束，拼成一张能直接开工的构思卡。
 
-界面是一台离线终端的样式——全直角、等宽字、终端绿 + 品红、扫描线。设计规范见 `DESIGN.md`。
+界面是一张绿毡赌桌——八个骰盅、一副牌、一个轮盘，庄家发一张构思卡给你。全直角、等宽字、无渐变。设计规范见 `DESIGN.md`。
+
+> **零依赖、零构建、零网络请求。** 单个 HTML 文件，双击即用，断网可用，数据只写在本机 localStorage。
+> 适合：卡在"今天做什么"的独立开发者 / 想练手但不知道做什么项目的人 / 需要随机约束来破局的人。
 
 > **零依赖、零构建、零网络请求。** 单个 HTML 文件，双击即用，断网可用，数据只写在本机 localStorage。
 > 适合：卡在"今天做什么"的独立开发者 / 想练手但不知道做什么项目的人 / 需要随机约束来破局的人。
@@ -57,20 +60,24 @@ const PROMPTS = ["一句话命题", ...];
 
 ## 已验证
 
-跑一条命令即可复验全部结论：
+跑三条命令即可复验全部结论：
 
 ```bash
-node tools/check.mjs
+node tools/check.mjs         # 反 AI 味 + 逻辑回归 → 17/17
+node tools/check-style.mjs   # 赌场风格真的接上了吗 → 16/16
+node tools/check-spec.mjs    # 导出双形态
 ```
 
-当前 **16/16 全部通过**：反 AI 味红线（圆角 / 渐变 / 毛玻璃 / emoji / 浮起阴影 / 硬编码色）、可访问性（focus-visible、reduced-motion）、离线（零外链）、响应式断点、逻辑回归（3000 张卡无空字段无 `undefined`、锁定语义正确）、工具名一致性。任何一项不过就是没做完。
+当前全部通过。覆盖面：反 AI 味红线（圆角 / 渐变 / 毛玻璃 / emoji / 浮起阴影 / 硬编码色 / 旧配色残留）、材质层（毡布 / 桌沿 / 卡纸）、骰子点阵与花色语义、canvas 配色由 token 供给、可访问性（focus-visible、reduced-motion）、离线（零外链）、响应式断点、逻辑回归（3000 张卡无空字段无 `undefined`、锁定语义正确）、工具名一致性。任何一项不过就是没做完。
 
 ## 设计来源
 
-界面规范不是自己拍的，取自公开的设计 skill，取用内容与理由记在 `DESIGN.md`：
+界面规范不是自己拍的：
 
-- [KAOPU-XiaoPu/web-design](https://github.com/KAOPU-XiaoPu/web-design) — 10 套 style-seeds 中选定 **#7 赛博朋克**（配色 / 字体 / 圆角 / 动效档位），并沿用其「中文页面专属要求」
+- 全局反 AI 味硬约束 → `~/.dsh/AGENTS.md`
+- 本项目视觉方案（赌桌材料语言、token 全集、组件规范）→ `DESIGN.md`
 - [anthropics/skills · frontend-design](https://github.com/anthropics/skills/blob/main/skills/frontend-design/SKILL.md) — anti-slop 约束：禁用 Inter/Roboto/系统默认字、禁用紫渐变、禁用统一圆角卡片网格、禁止居中一切
+- [KAOPU-XiaoPu/web-design](https://github.com/KAOPU-XiaoPu/web-design) — 10 套 style-seeds、58 个品牌设计系统、交互档位 L1–L3、质量清单（v1.1.0 的赛博朋克方案取自其 **#7 赛博朋克** seed；v1.2.0 赌桌方案是在其 anti-slop 纪律下另立的材料语言）
 - [bergside/awesome-design-skills](https://github.com/bergside/awesome-design-skills) — 组件必须含 default/hover/active/focus/disabled 全状态、可测试的可访问性验收项
 
 ## 已安装的设计 skill
@@ -91,7 +98,8 @@ node tools/check.mjs
 | 文件 | 作用 |
 |---|---|
 | `DESIGN.md` | **本项目界面规范与规则的唯一权威来源**：设计 token 全集、组件规范、10 条 Don'ts、验收清单、踩坑记录 |
-| `tools/check.mjs` | 界面 + 逻辑验收，`node tools/check.mjs`，必须 16/16 全过 |
+| `tools/check.mjs` | 反 AI 味 + 逻辑验收，`node tools/check.mjs`，17/17 |
+| `tools/check-style.mjs` | 赌场风格接线验收（材料层 / 骰子 / 花色 / 轮盘），16/16 |
 | `tools/check-spec.mjs` | 导出双形态验收，`node tools/check-spec.mjs`（加 `--show` 打印样例输出） |
 | `~/.dsh/AGENTS.md` | 全局规则（本机所有项目生效）：11 条反 AI 味硬黑名单、工程质量底线、环境事实。项目内不再放 `AGENTS.md` |
 
